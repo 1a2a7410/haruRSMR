@@ -281,9 +281,83 @@ function sortResults(list){
 }
 
 function renderAccountsChunked(list){
-  const box = document.getElementById('accounts'); box.innerHTML='';
-  if(!list.length){ box.innerHTML = '<p class="chip" style="background:#fff;border-color:#e5e7eb;color:#6b7280;">조건에 맞는 계정이 없습니다.</p>'; updateCounts(accounts?.length||0, 0); return; }
-  const total = list.length;
+  const box = el('#accounts');
+  box.innerHTML = '';
+
+  if (!list.length) {
+    box.innerHTML = '<p class="chip" style="background:#fff;border-color:#e5e7eb;color:#6b7280;">조건에 맞는 계정이 없습니다.</p>';
+    updateCounts(accounts?.length || 0, 0);
+    return;
+  }
+
+  // 이번 렌더 고유 토큰 (다른 렌더가 시작되면 중단)
+  const myToken = ++renderToken;
+
+  const CHUNK = 80; // 데이터 많으면 60, 여유면 100~120로 조절 가능
+  let i = 0;
+
+  function draw(){
+    if (myToken !== renderToken) return; // 이전 렌더 취소
+
+    const frag = document.createDocumentFragment();
+    const end = Math.min(i + CHUNK, list.length);
+
+    for (; i < end; i++) {
+      const acc = list[i];
+      const names = itemsFromAccount(acc);
+
+      const thumbs = names.slice(0, 11).map(n => {
+        const url = (itemsMap.get(n) || '').toString().trim() || PLACEHOLDER;
+        return `<img loading="lazy" decoding="async" fetchpriority="low"
+                     referrerpolicy="no-referrer"
+                     src="${url}" alt="${n}" title="${n}"
+                     onerror="this.src='${PLACEHOLDER}'">`;
+      }).join('');
+
+      // ★ 여기 오타 조심: ${more} (중괄호만 쓰면 안 됨)
+      const more = names.length > 11 ? `<span class="more">+${names.length - 11}</span>` : '';
+
+      const sold  = (acc['판매상태'] || '') === '판매완료';
+      const price = Number(acc['가격'] || 0).toLocaleString('ko-KR');
+      const uid   = acc['UID'] || '';
+      const desc  = acc['부가설명'] || '';
+
+      const card = h(`<div class="acc ${sold ? 'sold' : ''}" role="button">
+        <h3>
+          <span class="uid" title="탭하면 복사">${uid}</span>
+          <span class="price">${price}원</span>
+        </h3>
+        <div style="display:flex; gap:8px; align-items:center; margin-bottom:8px;">
+          <span class="pill">${sold ? '판매완료' : '판매중'}</span>
+          <span class="mut">${desc}</span>
+          <span class="mut">· 아이템 ${names.length}개</span>
+        </div>
+        <div class="thumbs">${thumbs}${more}</div>
+      </div>`);
+
+      // UID 클릭 → 복사
+      card.querySelector('.uid').addEventListener('click', async (e)=>{
+        e.stopPropagation();
+        try { await navigator.clipboard.writeText(uid); showToast('UID 복사됨'); }
+        catch { showToast('복사 실패'); }
+      });
+
+      // 카드 클릭 → 상세 모달
+      card.addEventListener('click', ()=> openAccModal(acc, names));
+
+      frag.appendChild(card);
+    }
+
+    box.appendChild(frag);
+    updateCounts(accounts.length, list.length);
+
+    if (i < list.length) {
+      (window.requestIdleCallback || window.requestAnimationFrame || setTimeout)(draw, 0);
+    }
+  }
+
+  (window.requestIdleCallback || window.requestAnimationFrame || setTimeout)(draw, 0);
+}
   const CHUNK = 80; // 살짝 키워서 DOM 호출 횟수 줄임
   let i = 0;
   function draw(){
