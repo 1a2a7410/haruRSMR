@@ -6,13 +6,435 @@
 <title>테스트 계정 검색</title>
 <link rel="preconnect" href="https://drive.google.com" crossorigin>
 <link rel="preconnect" href="https://lh3.googleusercontent.com" crossorigin>
-<!-- 여기에 최적화된 CSS와 HTML 전체 코드가 들어갑니다. -->
+<style>
+  :root { --bg:#fafafa; --fg:#0f172a; --mut:#6b7280; --line:#e5e7eb; --pri:#111827; --back:#ffffffd9; --okbg:#d4edda; --okfg:#155724; --okbd:#c3e6cb; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family:-apple-system,BlinkMacSystemFont,'Noto Sans KR',Segoe UI,Roboto,Arial,sans-serif; color:var(--fg); background:var(--bg); }
+  header { position:sticky; top:0; backdrop-filter:saturate(1.2) blur(6px); background:var(--back); border-bottom:1px solid var(--line); padding:10px 14px; z-index:10; }
+  h1 { margin:0; font-size:20px; }
+  .toolbar { display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; align-items:center; }
+  input[type=text]{ padding:10px 12px; border:1px solid var(--line); border-radius:10px; min-width:160px; }
+  select, button { padding:10px 12px; border:1px solid var(--pri); border-radius:10px; background:var(--pri); color:#fff; font-weight:700; cursor:pointer; }
+  select { background:#fff; color:#0f172a; border-color:var(--line); }
+  .btn.secondary { background:#fff; color:#0f172a; border:1px solid var(--line); }
+  label.chk { display:flex; align-items:center; gap:6px; font-size:13px; color:#6b7280; }
+  .counts { margin-left:auto; font-size:13px; color:#374151; }
+  .chips { display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; }
+  .chip { background:#f0fdf4; color:#065f46; border:1px solid #bbf7d0; border-radius:999px; padding:4px 8px; font-size:12px; cursor:pointer; user-select:none; }
+  .chip:hover { opacity:.85; }
+
+  main { padding:12px 14px 90px; }
+  .grid { display:grid; gap:10px; }
+  @media (max-width:480px) { .grid { grid-template-columns: repeat(6, 1fr); } }
+  @media (min-width:481px) and (max-width:900px) { .grid { grid-template-columns: repeat(12, 1fr); } }
+  @media (min-width:901px) { .grid { grid-template-columns: repeat(14, 1fr); } }
+
+  .item { border:1px solid var(--line); border-radius:10px; background:#fff; padding:6px; display:flex; flex-direction:column; gap:6px; align-items:center; cursor:pointer; position:relative; }
+  .item img { width:100%; aspect-ratio:1/1; object-fit:cover; border-radius:8px; background:#f3f4f6; }
+  .item small { color:#6b7280; font-size:11px; text-align:center; }
+  .item.selected { outline:3px solid #10b981; outline-offset:2px; }
+  .item .badge { position:absolute; right:6px; top:6px; background:#f3f4f6; color:#6b7280; border:1px solid #e5e7eb; border-radius:999px; font-size:11px; padding:2px 6px; display:none; }
+  .item.hasCount .badge { display:inline-block; }
+
+  .hint { margin:10px 0; color:#6b7280; font-size:13px; }
+
+  .accounts { display:grid; gap:12px; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); margin-top:12px; }
+  .acc { border:1px solid var(--line); background:#fff; border-radius:12px; padding:12px; cursor:pointer; }
+  .acc h3 { margin:0 0 8px; font-size:16px; display:flex; justify-content:space-between; gap:8px; align-items:center; }
+  .acc h3 .uid { font-weight:800; cursor:pointer; }
+  .acc h3 .uid:hover { color:#0ea5e9; text-decoration:underline; }
+  .price { font-weight:800; color:#111827; }
+  .thumbs { display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
+  .thumbs img { width:48px; height:48px; border-radius:8px; object-fit:cover; background:#f3f4f6; }
+  .thumbs .more { font-size:12px; color:#6b7280; }
+
+  .sold { opacity:.55 }
+  .pill { padding:3px 8px; border-radius:999px; font-size:12px; border:1px solid var(--line); color:#374151; background:#f8fafc; }
+
+  .loading { display:none; position:relative; top:0; left:0; color:#6b7280; font-weight:700; gap:8px; align-items:center; }
+  .loading .bubbles { display:inline-flex; gap:2px; margin-right:4px; }
+  .loading .bubbles i { width:6px; height:6px; border-radius:50%; background:#9ca3af; opacity:.3; animation:blink 1.2s infinite ease-in-out; display:block; }
+  .loading .bubbles i:nth-child(2){ animation-delay:.15s; }
+  .loading .bubbles i:nth-child(3){ animation-delay:.3s; }
+  @keyframes blink { 0%,100%{ opacity:.25 } 40%{ opacity:.95 } }
+
+  .flash { position:fixed; left:50%; top:50%; transform:translate(-50%,-50%); background:var(--okbg); color:var(--okfg); border:1px solid var(--okbd); padding:10px 14px; border-radius:10px; font-weight:800; box-shadow:0 6px 24px rgba(0,0,0,.12); opacity:0; pointer-events:none; transition:opacity .25s ease; z-index:200; }
+  .flash.on { opacity:1; }
+
+  .toast { position:fixed; left:50%; transform:translateX(-50%); bottom:18px; background:#111827; color:#fff; padding:10px 14px; border-radius:999px; font-size:13px; opacity:0; pointer-events:none; transition:.25s; z-index:60; }
+  .toast.on { opacity:1; }
+
+  .fab { position:fixed; right:12px; bottom:12px; display:flex; flex-direction:column; gap:10px; z-index:80; }
+  .fab a, .fab button { padding:10px 12px; border-radius:999px; font-size:12px; font-weight:800; border:1px solid #0f172a; }
+  .fab a { background:#0f172a; color:#fff; text-decoration:none; }
+  .fab button { background:#fff; color:#0f172a; }
+  .fab a:hover, .fab button:hover { opacity:.9; }
+  .fab .mini { font-size:12px; padding:9px 12px; }
+  @media (max-width:480px) {
+    .fab a, .fab button { font-size:12px; padding:9px 11px; }
+  }
+
+  .modal { position:fixed; inset:0; background:#0006; display:none; align-items:center; justify-content:center; padding:14px; z-index:100; }
+  .modal.on { display:flex; }
+  .modal .box { width:min(960px, 96vw); max-height:90vh; overflow:auto; background:#fff; border-radius:14px; border:1px solid var(--line); }
+  .modal header { position:sticky; top:0; border-bottom:1px solid var(--line); background:#fff; display:flex; align-items:center; justify-content:space-between; padding:10px 12px; }
+  .modal h3 { margin:0; font-size:16px; }
+  .modal .close { background:#fff; color:#111827; border:1px solid var(--line); border-radius:10px; padding:8px 10px; cursor:pointer; }
+  .help-body { padding:12px 14px 16px; }
+  .help-body h2 { margin:0; font-size:18px; }
+  .help-list { list-style: decimal; padding-left: 18px; margin:10px 18px 16px; color:#1f2937; line-height:1.6; }
+  .help-list > li { margin:8px 0; position: relative; left: -6px; }
+  .help-list ul { list-style: none; margin:6px 0 8px 18px; padding:0; }
+  .help-list ul li { margin:6px 0; display:flex; align-items:flex-start; }
+  .help-list ul li .bullet { display:inline-block; width:auto; color:#6b7280; margin-right:2px; }
+  .help-body em { font-style:normal; color:#111827; font-weight:700; }
+
+  .overlay { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; gap:12px; background:#ffffff; z-index:110; }
+  .spinner { width:26px; height:26px; border-radius:50%; border:3px solid #e5e7eb; border-top-color:#0ea5e9; animation:spin 0.9s linear infinite; }
+  .overlay .txt { color:#0f172a; font-weight:800; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+
+  .acc-modal .box { width:min(720px, 96vw); }
+  .acc-detail { padding:12px 14px 16px; }
+  .acc-detail .row { display:flex; align-items:center; gap:8px; margin:8px 0; flex-wrap:wrap; }
+  .acc-detail .thumbs { display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
+  .acc-detail .thumbs img { width:48px; height:48px; border-radius:8px; object-fit:cover; background:#f3f4f6; }
+  .acc-detail .label { display:inline-block; min-width:110px; font-size:13px; color:#6b7280; }
+</style>
 </head>
 <body>
-<!-- 여기에 본문 HTML이 들어갑니다. -->
+<header>
+  <h1>테스트</h1>
+  <div class="toolbar">
+    <input id="uid-q" type="text" placeholder="UID 검색" autocomplete="off">
+    <select id="sort" aria-label="정렬">
+      <option value="">정렬 없음</option>
+      <option value="price_desc">가격 높은 순</option>
+      <option value="price_asc">가격 낮은 순</option>
+      <option value="count_desc">캐릭터 많은 순</option>
+      <option value="count_asc">캐릭터 적은 순</option>
+    </select>
+    <label class="chk"><input type="checkbox" id="hide-sold"> 판매완료 숨기기</label>
+    <button id="btn-search">검색</button>
+    <button id="btn-clear" class="btn secondary">선택취소</button>
+    <div style="flex-basis:100%; height:0;"></div>
+    <span id="loading" class="loading"><span class="bubbles"><i></i><i></i><i></i></span><span class="txt">불러오는중…</span></span>
+    <div id="counts" class="counts" aria-live="polite">총 매물 – | 결과 –</div>
+  </div>
+  <div id="chips" class="chips"></div>
+</header>
+
+<main>
+  <h2 style="font-size:16px;margin:10px 0 6px;">아이템</h2>
+  <div id="items" class="grid" aria-live="polite"></div>
+
+  <div class="hint" id="hint-acc">검색을 누르면 매물을 불러옵니다.</div>
+  <h2 style="font-size:16px;margin:16px 0 6px;">계정</h2>
+  <div id="accounts" class="accounts"></div>
+</main>
+
+<div id="toast" class="toast">복사됨</div>
+<div id="flash" class="flash">검색완료</div>
+
+<div class="fab">
+  <a id="btn-buy" class="mini" href="#" target="_blank" rel="noopener">구매 문의</a>
+  <button id="btn-help" class="mini" type="button">사용 설명서</button>
+</div>
+
+<div id="help-modal" class="modal" aria-hidden="true">
+  <div class="box">
+    <header>
+      <h3>사용 설명서</h3>
+      <button id="help-close" class="close" type="button">닫기</button>
+    </header>
+    <div class="help-body">
+      <h2>구매 가이드</h2>
+      <ol class="help-list">
+        <li><strong>캐릭터 선택</strong>: 상단 카드에서 원하는 캐릭터를 눌러 선택하세요. 같은 카드를 여러 번 누르면 <em>최대 7회까지</em> 중첩 선택됩니다.</li>
+        <li><strong>UID/판매상태/정렬</strong>:
+          <ul>
+            <li><span class="bullet">•</span>UID: 일부 숫자만 입력해도 포함 검색됩니다.</li>
+            <li><span class="bullet">•</span>판매완료 숨기기: 이미 판매된 계정을 숨깁니다.</li>
+            <li><span class="bullet">•</span>정렬: 가격 또는 포함 캐릭터 수 기준 오름/내림차순.</li>
+          </ul>
+        </li>
+        <li><strong>검색 & 확인</strong>:
+          <ul>
+            <li><span class="bullet">•</span>검색 결과 카드에서 포함 캐릭터와 <strong>가격</strong>, 부가설명을 확인하세요.</li>
+          </ul>
+        </li>
+      </ol>
+    </div>
+  </div>
+</div>
+
+<div id="acc-modal" class="modal acc-modal" aria-hidden="true">
+  <div class="box">
+    <header>
+      <h3>계정 상세</h3>
+      <button id="acc-close" class="close" type="button">닫기</button>
+    </header>
+    <div class="acc-detail" id="acc-detail"></div>
+  </div>
+</div>
+
+<div id="overlay" class="overlay" aria-hidden="false">
+  <div class="spinner" aria-hidden="true"></div>
+  <div class="txt" aria-live="polite">로딩중</div>
+</div>
+
 <script>
 const API_BASE = "https://script.google.com/macros/s/AKfycbziMLW8TUgzTFnrYJFpW9u3AQmnWPeyDofFbrnKrn6ECjMNMWCpRrhkNG-OJGojM6TJ/exec";
-// 여기에 최적화된 JavaScript 전체 코드가 들어갑니다.
+const KAKAO = "https://open.kakao.com/o/sENDKZBh";
+const PLACEHOLDER = "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><rect width='100%' height='100%' fill='%23eef'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' font-size='12' fill='%23999'>no image</text></svg>";
+
+const $ = (q)=>document.querySelector(q);
+const $$ = (q)=>document.querySelectorAll(q);
+function h(html){ const d=document.createElement('div'); d.innerHTML=html.trim(); return d.firstChild; }
+function cleanUrl(u){ if(!u) return u; if(/\.jrg$/i.test(u)) u=u.replace(/\.jrg$/i,'.jpg'); return u; }
+function raf(fn){ return new Promise(r=>requestAnimationFrame(()=>{ fn(); r(); })); }
+function idle(fn){ if('requestIdleCallback' in window) requestIdleCallback(fn,{ timeout:300 }); else setTimeout(fn,0); }
+function debounce(fn, wait){ let t; return (...args)=>{ clearTimeout(t); t=setTimeout(()=>fn(...args), wait); }; }
+
+let itemsMap = new Map();
+let accounts = null;
+let selected = new Map();
+
+function updateCounts(total, matched){ document.getElementById('counts').textContent = `총 매물 ${total ?? '–'} | 결과 ${matched ?? '–'}`; }
+function itemCount(name){ return selected.get(name) || 0; }
+function setItemCount(name, next){ if(next<=0) selected.delete(name); else selected.set(name, Math.min(7,next)); }
+function chipLabel(name, cnt){ return cnt>=2 ? `${name} +${cnt-1}` : name; }
+
+function updateChips(){
+  const box = document.getElementById('chips'); box.innerHTML='';
+  if(!selected.size) return;
+  for(const [name,cnt] of selected){
+    const chip = h(`<span class="chip">${chipLabel(name,cnt)}</span>`);
+    chip.addEventListener('click', ()=>{
+      const cur = itemCount(name);
+      const next = cur-1;
+      setItemCount(name, next);
+      renderItemBadges();
+      updateChips();
+      rerenderFiltered();
+    }, { passive:true });
+    box.appendChild(chip);
+  }
+}
+function renderItemBadges(){
+  document.querySelectorAll('.item').forEach(card=>{
+    const name = card.getAttribute('data-name');
+    const cnt = itemCount(name);
+    const badge = card.querySelector('.badge');
+    if(cnt >= 2){ badge.textContent = `+${cnt-1}`; card.classList.add('hasCount'); card.classList.add('selected'); }
+    else { badge.textContent=''; card.classList.remove('hasCount'); card.classList.toggle('selected', cnt>=1); }
+  });
+}
+
+async function renderItems(list){
+  const box = document.getElementById('items'); box.innerHTML='';
+  const frag = document.createDocumentFragment();
+  for(const it of list){
+    const name = it['아이템명'] || it['name'] || '';
+    const img  = cleanUrl((it['이미지URL'] || it['url'] || '').toString().trim());
+    const card = h(`<div class="item" data-name="${name}">
+      <span class="badge"></span>
+      <img loading="lazy" decoding="async" fetchpriority="low" referrerpolicy="no-referrer" src="${img || PLACEHOLDER}" alt="${name}" onerror="this.src='{PLACEHOLDER}'">
+      <small>${name}</small>
+    </div>`.replace('{PLACEHOLDER}', PLACEHOLDER));
+    card.addEventListener('click', ()=>{
+      const cur = itemCount(name);
+      const next = (cur>=7) ? 0 : cur+1;
+      setItemCount(name, next);
+      updateChips();
+      renderItemBadges();
+      rerenderFiltered();
+    }, { passive:true });
+    frag.appendChild(card);
+  }
+  box.appendChild(frag);
+  renderItemBadges();
+  const ov = document.getElementById('overlay'); if (ov) { ov.style.display='none'; ov.setAttribute('aria-hidden','true'); }
+}
+
+function itemsFromAccount(acc){
+  const arr=[]; for(const k in acc){ if(/^포함아이템\d+$/.test(k)){ const v=(acc[k]||'').toString().trim(); if(v) arr.push(v); } }
+  return arr;
+}
+function applyFilters(list){
+  const q = document.getElementById('uid-q').value.trim();
+  const hide = document.getElementById('hide-sold').checked;
+  const want = new Map(selected);
+  return list.filter(a=>{
+    if(q && !String(a['UID']||'').includes(q)) return false;
+    if(hide && (a['판매상태']||'')==='판매완료') return false;
+    if(want.size){
+      const have=new Map();
+      for(const n of itemsFromAccount(a)){ have.set(n,(have.get(n)||0)+1); }
+      for(const [n,c] of want){ if((have.get(n)||0) < c) return false; }
+    }
+    return true;
+  });
+}
+function sortResults(list){
+  const v = document.getElementById('sort').value;
+  const ext = list.map(a=>({ a, price:Number(a['가격']||0), cnt:itemsFromAccount(a).length }));
+  if(v==='price_desc') ext.sort((x,y)=>y.price-x.price);
+  if(v==='price_asc')  ext.sort((x,y)=>x.price-y.price);
+  if(v==='count_desc') ext.sort((x,y)=>y.cnt-x.cnt);
+  if(v==='count_asc')  ext.sort((x,y)=>x.cnt-y.cnt);
+  return ext.map(x=>x.a);
+}
+
+function renderAccountsChunked(list){
+  const box = document.getElementById('accounts'); box.innerHTML='';
+  if(!list.length){ box.innerHTML = '<p class="chip" style="background:#fff;border-color:#e5e7eb;color:#6b7280;">조건에 맞는 계정이 없습니다.</p>'; updateCounts(accounts?.length||0, 0); return; }
+  const total = list.length;
+  const CHUNK = 60;
+  let i = 0;
+
+  function draw(){
+    const frag = document.createDocumentFragment();
+    const end = Math.min(i+CHUNK, total);
+    for(; i<end; i++){
+      const acc = list[i];
+      const names = itemsFromAccount(acc);
+      const thumbs = names.slice(0,11).map(n=>{
+        const url = cleanUrl(itemsMap.get(n)||PLACEHOLDER);
+        return `<img loading="lazy" decoding="async" fetchpriority="low" src="${url||PLACEHOLDER}" alt="${n}" title="${n}" onerror="this.src='${PLACEHOLDER}'">`;
+      }).join('');
+      const more = names.length>11 ? `<span class="more">+${names.length-11}</span>` : '';
+      const sold = (acc['판매상태']||'')==='판매완료';
+      const price = Number(acc['가격']||0).toLocaleString('ko-KR');
+      const uid = acc['UID']||'';
+      const desc = acc['부가설명']||'';
+      const card = h(`<div class="acc ${sold?'sold':''}" role="button">
+        <h3><span class="uid" title="탭하면 복사">${uid}</span><span class="price">${price}원</span></h3>
+        <div style="display:flex; gap:8px; align-items:center; margin-bottom:8px;">
+          <span class="pill">${sold?'판매완료':'판매중'}</span>
+          <span class="mut">${desc}</span>
+          <span class="mut">· 아이템 ${names.length}개</span>
+        </div>
+        <div class="thumbs">${thumbs}${more}</div>
+      </div>`);
+      card.querySelector('.uid').addEventListener('click', async (e)=>{
+        e.stopPropagation();
+        try{ await navigator.clipboard.writeText(uid); showToast('UID 복사됨'); }catch{ showToast('복사 실패'); }
+      }, { passive:true });
+      card.addEventListener('click', ()=> openAccModal(acc, names), { passive:true });
+      frag.appendChild(card);
+    }
+    box.appendChild(frag);
+    updateCounts(accounts.length, list.length);
+    if(i < total) (window.requestIdleCallback||setTimeout)(draw, 0);
+  }
+  (window.requestIdleCallback||setTimeout)(draw, 0);
+}
+
+const rerenderFiltered = (function(fn, wait){ let t; return function(){ clearTimeout(t); t=setTimeout(fn, wait); }; })(async ()=>{
+  if(!accounts) return;
+  const filtered = sortResults(applyFilters(accounts));
+  await new Promise(r=>requestAnimationFrame(r));
+  renderAccountsChunked(filtered);
+}, 80);
+
+function openAccModal(acc, names){
+  const modal = document.getElementById('acc-modal');
+  const box = document.getElementById('acc-detail');
+  const uid = acc['UID']||'';
+  const desc = acc['부가설명']||'';
+  const price = Number(acc['가격']||0).toLocaleString('ko-KR');
+
+  const thumbs = names.map(n=>{
+    const url = cleanUrl(itemsMap.get(n)||PLACEHOLDER);
+    return `<div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+      <img loading="lazy" decoding="async" src="${url||PLACEHOLDER}" alt="${n}" title="${n}" onerror="this.src='${PLACEHOLDER}'" width="48" height="48" style="border-radius:8px;object-fit:cover;background:#f3f4f6">
+      <small style="color:#6b7280;font-size:11px;text-align:center;max-width:64px;word-break:keep-all">${n}</small>
+    </div>`;
+  }).join('');
+
+  box.innerHTML = `
+    <div class="row"><span class="label">UID</span><strong style="font-size:15px">${uid}</strong></div>
+    <div class="row"><span class="label">모든 캐릭터 현황</span></div>
+    <div class="thumbs" style="margin:2px 0 8px">${thumbs}</div>
+    <div class="row"><span class="label">부가설명</span><span>${desc||'-'}</span></div>
+    <div class="row"><span class="label">가격</span><strong>${price}원</strong></div>
+  `;
+  modal.classList.add('on'); modal.setAttribute('aria-hidden','false');
+}
+function closeAccModal(){ const m = document.getElementById('acc-modal'); m.classList.remove('on'); m.setAttribute('aria-hidden','true'); }
+
+async function fetchJSON(url, signal){
+  const r = await fetch(url, { headers: { 'Content-Type':'text/plain;charset=utf-8' }, signal });
+  const txt = await r.text();
+  try{ return JSON.parse(txt); }catch(e){ throw new Error('JSON parse error: '+txt.slice(0,200)); }
+}
+
+let ctrlItems = null, ctrlAcc = null;
+async function loadItems(){
+  ctrlItems && ctrlItems.abort();
+  ctrlItems = new AbortController();
+  const list = await fetchJSON(API_BASE + "?sheet=items", ctrlItems.signal);
+  itemsMap = new Map(list.map(it=>[it['아이템명']||it['name'], (it['이미지URL']||it['url']||'').toString().trim()]));
+  await new Promise(r=>requestAnimationFrame(r));
+  renderItems(list);
+}
+async function loadAccountsIfNeeded(){
+  if (accounts) return accounts;
+  ctrlAcc && ctrlAcc.abort();
+  ctrlAcc = new AbortController();
+  const list = await fetchJSON(API_BASE + "?sheet=accounts", ctrlAcc.signal);
+  accounts = list || [];
+  return accounts;
+}
+async function runSearch(){
+  document.getElementById('loading').style.display = 'inline-flex';
+  document.getElementById('hint-acc').style.display = 'none';
+  try {
+    await loadAccountsIfNeeded();
+    await rerenderFiltered();
+  } catch (e) {
+    console.warn(e);
+  } finally {
+    document.getElementById('loading').style.display = 'none';
+    flashDone();
+  }
+}
+
+function showToast(msg='복사됨'){
+  const t = document.getElementById('toast'); t.textContent = msg;
+  t.classList.add('on');
+  setTimeout(()=> t.classList.remove('on'), 1100);
+}
+function flashDone(){ let f = document.getElementById('flash'); f.classList.add('on'); clearTimeout(f._t); f._t=setTimeout(()=> f.classList.remove('on'), 650); }
+
+[['#sort','change'],['#uid-q','input'],['#hide-sold','change']].forEach(([q,evt])=>{
+  const node=document.querySelector(q); if(!node) return;
+  node.addEventListener(evt, ()=>{ rerenderFiltered(); }, { passive:true });
+});
+
+document.getElementById('btn-search').addEventListener('click', runSearch);
+document.getElementById('btn-clear').addEventListener('click', ()=>{
+  selected.clear(); updateChips(); renderItems(Array.from(itemsMap, ([아이템명, 이미지URL])=>({아이템명, 이미지URL})));
+  rerenderFiltered();
+});
+
+document.getElementById('btn-buy').setAttribute('href', KAKAO);
+document.getElementById('btn-help').addEventListener('click', ()=>{
+  const m = document.getElementById('help-modal');
+  m.classList.add('on'); m.setAttribute('aria-hidden','false');
+});
+document.getElementById('help-close').addEventListener('click', ()=>{
+  const m = document.getElementById('help-modal');
+  m.classList.remove('on'); m.setAttribute('aria-hidden','true');
+});
+document.getElementById('acc-close').addEventListener('click', closeAccModal);
+document.getElementById('acc-modal').addEventListener('click', (e)=>{ if(e.target.id==='acc-modal') closeAccModal(); });
+
+(async function boot(){
+  try{ await loadItems(); }catch(e){ console.warn('items load failed', e); }
+  updateCounts(undefined, undefined);
+})();
 </script>
 </body>
 </html>
