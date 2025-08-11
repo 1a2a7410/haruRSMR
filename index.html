@@ -1,5 +1,4 @@
 <!doctype html>
-+ let renderToken = 0;
 <html lang="ko">
 <head>
 <meta charset="utf-8">
@@ -196,6 +195,37 @@ let itemsMap = new Map();
 let accounts = null;
 let selected = new Map(); // name -> count (1..7)
 
+/* ===================== ★ 여기서부터 추가 ===================== */
+// 계정별 포함 아이템 캐시 (성능 개선용)
+const accMeta = new WeakMap(); // acc 객체 -> { items:string[], count:number }
+
+// 청크 렌더 중복 취소용 토큰(이미 쓰고 있으면 유지)
+let renderToken = 0;
+
+/** 계정이 보유한 아이템명을 한 번만 모아 캐시에 저장 후 반환 */
+function getAccItems(acc){
+  const cached = accMeta.get(acc);
+  if (cached) return cached.items;
+
+  const arr = [];
+  for (const k in acc) {
+    if (/^포함아이템\d+$/.test(k)) {
+      const v = (acc[k] || '').toString().trim();
+      if (v) arr.push(v);
+    }
+  }
+  accMeta.set(acc, { items: arr, count: arr.length });
+  return arr;
+}
+
+/** 계정의 아이템 개수(캐시 우선) */
+function getAccCount(acc){
+  const cached = accMeta.get(acc);
+  if (cached) return cached.count;
+  return getAccItems(acc).length;
+}
+/* ===================== ★ 추가 끝 ===================== */
+
 function updateCounts(total, matched){ document.getElementById('counts').textContent = `총 매물 ${total ?? '–'} | 결과 ${matched ?? '–'}`; }
 function itemCount(name){ return selected.get(name) || 0; }
 function setItemCount(name, next){ if(next<=0) selected.delete(name); else selected.set(name, Math.min(7,next)); }
@@ -216,6 +246,7 @@ function updateChips(){
     box.appendChild(chip);
   }
 }
+</script>
 function renderItemBadges(){
   document.querySelectorAll('.item').forEach(card=>{
     const name = card.getAttribute('data-name');
