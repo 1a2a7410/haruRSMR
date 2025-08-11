@@ -4,8 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>테스트 계정 검색</title>
+<link rel="preconnect" href="https://script.google.com" crossorigin>
 <link rel="preconnect" href="https://drive.google.com" crossorigin>
+<link rel="dns-prefetch" href="//drive.google.com">
 <link rel="preconnect" href="https://lh3.googleusercontent.com" crossorigin>
+<link rel="dns-prefetch" href="//lh3.googleusercontent.com">
 <style>
   :root { --bg:#fafafa; --fg:#0f172a; --mut:#6b7280; --line:#e5e7eb; --pri:#111827; --back:#ffffffd9; --okbg:#d4edda; --okfg:#155724; --okbd:#c3e6cb; }
   * { box-sizing: border-box; }
@@ -21,7 +24,6 @@
   .counts { margin-left:auto; font-size:13px; color:#374151; }
   .chips { display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; }
   .chip { background:#f0fdf4; color:#065f46; border:1px solid #bbf7d0; border-radius:999px; padding:4px 8px; font-size:12px; cursor:pointer; user-select:none; }
-  .chip:hover { opacity:.85; }
 
   main { padding:12px 14px 90px; }
   .grid { display:grid; gap:10px; }
@@ -39,7 +41,7 @@
   .hint { margin:10px 0; color:#6b7280; font-size:13px; }
 
   .accounts { display:grid; gap:12px; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); margin-top:12px; }
-  .acc { border:1px solid var(--line); background:#fff; border-radius:12px; padding:12px; cursor:pointer; }
+  .acc { border:1px solid var(--line); background:#fff; border-radius:12px; padding:12px; cursor:pointer; contain:content; }
   .acc h3 { margin:0 0 8px; font-size:16px; display:flex; justify-content:space-between; gap:8px; align-items:center; }
   .acc h3 .uid { font-weight:800; cursor:pointer; }
   .acc h3 .uid:hover { color:#0ea5e9; text-decoration:underline; }
@@ -70,9 +72,6 @@
   .fab button { background:#fff; color:#0f172a; }
   .fab a:hover, .fab button:hover { opacity:.9; }
   .fab .mini { font-size:12px; padding:9px 12px; }
-  @media (max-width:480px) {
-    .fab a, .fab button { font-size:12px; padding:9px 11px; }
-  }
 
   .modal { position:fixed; inset:0; background:#0006; display:none; align-items:center; justify-content:center; padding:14px; z-index:100; }
   .modal.on { display:flex; }
@@ -184,21 +183,17 @@
 </div>
 
 <script>
-const API_BASE = "https://script.google.com/macros/s/AKfycbziMLW8TUgzTFnrYJFpW9u3AQmnWPeyDofFbrnKrn6ECjMNMWCpRrhkNG-OJGojM6TJ/exec";
+const API_BASE = 'https://script.google.com/macros/s/AKfycbziMLW8TUgzTFnrYJFpW9u3AQmnWPeyDofFbrnKrn6ECjMNMWCpRrhkNG-OJGojM6TJ/exec';
 const KAKAO = "https://open.kakao.com/o/sENDKZBh";
 const PLACEHOLDER = "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><rect width='100%' height='100%' fill='%23eef'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' font-size='12' fill='%23999'>no image</text></svg>";
 
 const $ = (q)=>document.querySelector(q);
-const $$ = (q)=>document.querySelectorAll(q);
 function h(html){ const d=document.createElement('div'); d.innerHTML=html.trim(); return d.firstChild; }
 function cleanUrl(u){ if(!u) return u; if(/\.jrg$/i.test(u)) u=u.replace(/\.jrg$/i,'.jpg'); return u; }
-function raf(fn){ return new Promise(r=>requestAnimationFrame(()=>{ fn(); r(); })); }
-function idle(fn){ if('requestIdleCallback' in window) requestIdleCallback(fn,{ timeout:300 }); else setTimeout(fn,0); }
-function debounce(fn, wait){ let t; return (...args)=>{ clearTimeout(t); t=setTimeout(()=>fn(...args), wait); }; }
 
 let itemsMap = new Map();
 let accounts = null;
-let selected = new Map();
+let selected = new Map(); // name -> count (1..7)
 
 function updateCounts(total, matched){ document.getElementById('counts').textContent = `총 매물 ${total ?? '–'} | 결과 ${matched ?? '–'}`; }
 function itemCount(name){ return selected.get(name) || 0; }
@@ -216,8 +211,7 @@ function updateChips(){
       setItemCount(name, next);
       renderItemBadges();
       updateChips();
-      rerenderFiltered();
-    }, { passive:true });
+    });
     box.appendChild(chip);
   }
 }
@@ -239,17 +233,16 @@ async function renderItems(list){
     const img  = cleanUrl((it['이미지URL'] || it['url'] || '').toString().trim());
     const card = h(`<div class="item" data-name="${name}">
       <span class="badge"></span>
-      <img loading="lazy" decoding="async" fetchpriority="low" referrerpolicy="no-referrer" src="${img || PLACEHOLDER}" alt="${name}" onerror="this.src='{PLACEHOLDER}'">
+      <img loading="lazy" decoding="async" fetchpriority="low" referrerpolicy="no-referrer" src="${img || PLACEHOLDER}" alt="${name}" onerror="this.src='${PLACEHOLDER}'">
       <small>${name}</small>
-    </div>`.replace('{PLACEHOLDER}', PLACEHOLDER));
+    </div>`);
     card.addEventListener('click', ()=>{
       const cur = itemCount(name);
       const next = (cur>=7) ? 0 : cur+1;
       setItemCount(name, next);
       updateChips();
       renderItemBadges();
-      rerenderFiltered();
-    }, { passive:true });
+    });
     frag.appendChild(card);
   }
   box.appendChild(frag);
@@ -290,19 +283,15 @@ function renderAccountsChunked(list){
   const box = document.getElementById('accounts'); box.innerHTML='';
   if(!list.length){ box.innerHTML = '<p class="chip" style="background:#fff;border-color:#e5e7eb;color:#6b7280;">조건에 맞는 계정이 없습니다.</p>'; updateCounts(accounts?.length||0, 0); return; }
   const total = list.length;
-  const CHUNK = 60;
+  const CHUNK = 80; // 살짝 키워서 DOM 호출 횟수 줄임
   let i = 0;
-
   function draw(){
     const frag = document.createDocumentFragment();
     const end = Math.min(i+CHUNK, total);
-    for(; i<end; i++){
-      const acc = list[i];
+    for(; i<end; i++){ const acc = list[i];
       const names = itemsFromAccount(acc);
-      const thumbs = names.slice(0,11).map(n=>{
-        const url = cleanUrl(itemsMap.get(n)||PLACEHOLDER);
-        return `<img loading="lazy" decoding="async" fetchpriority="low" src="${url||PLACEHOLDER}" alt="${n}" title="${n}" onerror="this.src='${PLACEHOLDER}'">`;
-      }).join('');
+      const thumbs = names.slice(0,11).map(n=>{ const url = (itemsMap.get(n)||'').toString().trim() || PLACEHOLDER;
+        return `<img loading="lazy" decoding="async" fetchpriority="low" referrerpolicy="no-referrer" src="${url}" alt="${n}" title="${n}" onerror="this.src='${PLACEHOLDER}'">`; }).join('');
       const more = names.length>11 ? `<span class="more">+${names.length-11}</span>` : '';
       const sold = (acc['판매상태']||'')==='판매완료';
       const price = Number(acc['가격']||0).toLocaleString('ko-KR');
@@ -315,15 +304,11 @@ function renderAccountsChunked(list){
           <span class="mut">${desc}</span>
           <span class="mut">· 아이템 ${names.length}개</span>
         </div>
-        <div class="thumbs">${thumbs}${more}</div>
+        <div class="thumbs">${thumbs}{more}</div>
       </div>`);
-      card.querySelector('.uid').addEventListener('click', async (e)=>{
-        e.stopPropagation();
-        try{ await navigator.clipboard.writeText(uid); showToast('UID 복사됨'); }catch{ showToast('복사 실패'); }
-      }, { passive:true });
-      card.addEventListener('click', ()=> openAccModal(acc, names), { passive:true });
-      frag.appendChild(card);
-    }
+      card.querySelector('.uid').addEventListener('click', async (e)=>{ e.stopPropagation(); try{ await navigator.clipboard.writeText(uid); showToast('UID 복사됨'); }catch{ showToast('복사 실패'); } });
+      card.addEventListener('click', ()=> openAccModal(acc, names));
+      frag.appendChild(card); }
     box.appendChild(frag);
     updateCounts(accounts.length, list.length);
     if(i < total) (window.requestIdleCallback||setTimeout)(draw, 0);
@@ -331,12 +316,27 @@ function renderAccountsChunked(list){
   (window.requestIdleCallback||setTimeout)(draw, 0);
 }
 
-const rerenderFiltered = (function(fn, wait){ let t; return function(){ clearTimeout(t); t=setTimeout(fn, wait); }; })(async ()=>{
-  if(!accounts) return;
-  const filtered = sortResults(applyFilters(accounts));
-  await new Promise(r=>requestAnimationFrame(r));
-  renderAccountsChunked(filtered);
-}, 80);
+async function runSearch(){
+  document.getElementById('loading').style.display = 'inline-flex';
+  document.getElementById('hint-acc').style.display = 'none';
+  try {
+    await loadAccountsIfNeeded(); // 최초 1회만 네트워크
+    const filtered = sortResults(applyFilters(accounts));
+    renderAccountsChunked(filtered);
+  } catch (e) { console.warn(e); }
+  finally { document.getElementById('loading').style.display = 'none'; flashDone(); }
+}
+
+function showToast(msg='복사됨'){ const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('on'); setTimeout(()=> t.classList.remove('on'), 1100); }
+function flashDone(){ let f = document.getElementById('flash'); f.classList.add('on'); clearTimeout(f._t); f._t=setTimeout(()=> f.classList.remove('on'), 650); }
+
+document.getElementById('btn-search').addEventListener('click', runSearch);
+document.getElementById('btn-clear').addEventListener('click', ()=>{ selected.clear(); updateChips(); renderItems(Array.from(itemsMap, ([아이템명, 이미지URL])=>({아이템명, 이미지URL}))); });
+
+document.getElementById('btn-help').addEventListener('click', ()=>{ const m = document.getElementById('help-modal'); m.classList.add('on'); m.setAttribute('aria-hidden','false'); });
+document.getElementById('help-close').addEventListener('click', ()=>{ const m = document.getElementById('help-modal'); m.classList.remove('on'); m.setAttribute('aria-hidden','true'); });
+document.getElementById('acc-close').addEventListener('click', ()=>{ const m = document.getElementById('acc-modal'); m.classList.remove('on'); m.setAttribute('aria-hidden','true'); });
+document.getElementById('acc-modal').addEventListener('click', (e)=>{ if(e.target.id==='acc-modal'){ const m=e.currentTarget; m.classList.remove('on'); m.setAttribute('aria-hidden','true'); } });
 
 function openAccModal(acc, names){
   const modal = document.getElementById('acc-modal');
@@ -344,15 +344,11 @@ function openAccModal(acc, names){
   const uid = acc['UID']||'';
   const desc = acc['부가설명']||'';
   const price = Number(acc['가격']||0).toLocaleString('ko-KR');
-
-  const thumbs = names.map(n=>{
-    const url = cleanUrl(itemsMap.get(n)||PLACEHOLDER);
+  const thumbs = names.map(n=>{ const url = (itemsMap.get(n)||'').toString().trim() || PLACEHOLDER;
     return `<div style="display:flex;flex-direction:column;align-items:center;gap:4px">
-      <img loading="lazy" decoding="async" src="${url||PLACEHOLDER}" alt="${n}" title="${n}" onerror="this.src='${PLACEHOLDER}'" width="48" height="48" style="border-radius:8px;object-fit:cover;background:#f3f4f6">
+      <img loading="lazy" decoding="async" referrerpolicy="no-referrer" src="${url}" alt="${n}" title="${n}" onerror="this.src='${PLACEHOLDER}'" width="48" height="48" style="border-radius:8px;object-fit:cover;background:#f3f4f6">
       <small style="color:#6b7280;font-size:11px;text-align:center;max-width:64px;word-break:keep-all">${n}</small>
-    </div>`;
-  }).join('');
-
+    </div>`; }).join('');
   box.innerHTML = `
     <div class="row"><span class="label">UID</span><strong style="font-size:15px">${uid}</strong></div>
     <div class="row"><span class="label">모든 캐릭터 현황</span></div>
@@ -362,23 +358,22 @@ function openAccModal(acc, names){
   `;
   modal.classList.add('on'); modal.setAttribute('aria-hidden','false');
 }
-function closeAccModal(){ const m = document.getElementById('acc-modal'); m.classList.remove('on'); m.setAttribute('aria-hidden','true'); }
 
 async function fetchJSON(url, signal){
   const r = await fetch(url, { headers: { 'Content-Type':'text/plain;charset=utf-8' }, signal });
   const txt = await r.text();
   try{ return JSON.parse(txt); }catch(e){ throw new Error('JSON parse error: '+txt.slice(0,200)); }
 }
-
-let ctrlItems = null, ctrlAcc = null;
+let ctrlItems = null;
 async function loadItems(){
   ctrlItems && ctrlItems.abort();
   ctrlItems = new AbortController();
   const list = await fetchJSON(API_BASE + "?sheet=items", ctrlItems.signal);
+  // Map만 미리 만들어두고, 렌더는 다음 프레임으로 밀어 초기 로딩 체감 개선
   itemsMap = new Map(list.map(it=>[it['아이템명']||it['name'], (it['이미지URL']||it['url']||'').toString().trim()]));
-  await new Promise(r=>requestAnimationFrame(r));
-  renderItems(list);
+  requestAnimationFrame(()=> renderItems(list));
 }
+let ctrlAcc = null;
 async function loadAccountsIfNeeded(){
   if (accounts) return accounts;
   ctrlAcc && ctrlAcc.abort();
@@ -387,49 +382,6 @@ async function loadAccountsIfNeeded(){
   accounts = list || [];
   return accounts;
 }
-async function runSearch(){
-  document.getElementById('loading').style.display = 'inline-flex';
-  document.getElementById('hint-acc').style.display = 'none';
-  try {
-    await loadAccountsIfNeeded();
-    await rerenderFiltered();
-  } catch (e) {
-    console.warn(e);
-  } finally {
-    document.getElementById('loading').style.display = 'none';
-    flashDone();
-  }
-}
-
-function showToast(msg='복사됨'){
-  const t = document.getElementById('toast'); t.textContent = msg;
-  t.classList.add('on');
-  setTimeout(()=> t.classList.remove('on'), 1100);
-}
-function flashDone(){ let f = document.getElementById('flash'); f.classList.add('on'); clearTimeout(f._t); f._t=setTimeout(()=> f.classList.remove('on'), 650); }
-
-[['#sort','change'],['#uid-q','input'],['#hide-sold','change']].forEach(([q,evt])=>{
-  const node=document.querySelector(q); if(!node) return;
-  node.addEventListener(evt, ()=>{ rerenderFiltered(); }, { passive:true });
-});
-
-document.getElementById('btn-search').addEventListener('click', runSearch);
-document.getElementById('btn-clear').addEventListener('click', ()=>{
-  selected.clear(); updateChips(); renderItems(Array.from(itemsMap, ([아이템명, 이미지URL])=>({아이템명, 이미지URL})));
-  rerenderFiltered();
-});
-
-document.getElementById('btn-buy').setAttribute('href', KAKAO);
-document.getElementById('btn-help').addEventListener('click', ()=>{
-  const m = document.getElementById('help-modal');
-  m.classList.add('on'); m.setAttribute('aria-hidden','false');
-});
-document.getElementById('help-close').addEventListener('click', ()=>{
-  const m = document.getElementById('help-modal');
-  m.classList.remove('on'); m.setAttribute('aria-hidden','true');
-});
-document.getElementById('acc-close').addEventListener('click', closeAccModal);
-document.getElementById('acc-modal').addEventListener('click', (e)=>{ if(e.target.id==='acc-modal') closeAccModal(); });
 
 (async function boot(){
   try{ await loadItems(); }catch(e){ console.warn('items load failed', e); }
