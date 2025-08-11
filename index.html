@@ -304,7 +304,7 @@ function renderAccountsChunked(list){
           <span class="mut">${desc}</span>
           <span class="mut">· 아이템 ${names.length}개</span>
         </div>
-        <div class="thumbs">${thumbs}{more}</div>
+        <div class="thumbs">${thumbs}${more}</div>
       </div>`);
       card.querySelector('.uid').addEventListener('click', async (e)=>{ e.stopPropagation(); try{ await navigator.clipboard.writeText(uid); showToast('UID 복사됨'); }catch{ showToast('복사 실패'); } });
       card.addEventListener('click', ()=> openAccModal(acc, names));
