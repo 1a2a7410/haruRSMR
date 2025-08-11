@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-let inflight = { auth:null, load:null, mutate:null };
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -66,10 +65,11 @@ let inflight = { auth:null, load:null, mutate:null };
 </header>
 
 <main>
+  <!-- 인증/설정 -->
   <section class="card">
     <div class="row">
       <label>웹앱 주소</label>
-      <input id="api" type="text" placeholder="Apps Script Web App URL 붙여넣기" value="{API_BASE}">
+      <input id="api" type="text" placeholder="Apps Script Web App URL 붙여넣기" value="https://script.google.com/macros/s/AKfycbziMLW8TUgzTFnrYJFpW9u3AQmnWPeyDofFbrnKrn6ECjMNMWCpRrhkNG-OJGojM6TJ/exec">
     </div>
     <div class="row">
       <label>비밀번호</label>
@@ -81,6 +81,7 @@ let inflight = { auth:null, load:null, mutate:null };
     </div>
   </section>
 
+  <!-- 아이템 관리 -->
   <section class="card">
     <div class="toolbar" style="justify-content:space-between">
       <strong>아이템 관리</strong>
@@ -104,6 +105,7 @@ let inflight = { auth:null, load:null, mutate:null };
     </div>
   </section>
 
+  <!-- 신규 계정 -->
   <section class="card">
     <div class="toolbar"><strong>신규 계정 추가</strong></div>
     <div class="grid2">
@@ -125,6 +127,7 @@ let inflight = { auth:null, load:null, mutate:null };
     </div>
   </section>
 
+  <!-- 수정 -->
   <section class="card">
     <div class="toolbar"><strong>기존 계정 수정</strong></div>
     <div class="row"><label>수정할 UID</label><input id="edit-uid" type="text" placeholder="예: 12001"><button id="btn-load-one" class="btn btn-secondary" style="white-space:nowrap">불러오기</button></div>
@@ -145,6 +148,7 @@ let inflight = { auth:null, load:null, mutate:null };
     </div>
   </section>
 
+  <!-- 삭제 -->
   <section class="card">
     <div class="toolbar"><strong>계정 삭제</strong></div>
     <div class="row"><label>삭제 UID</label><input id="del-uid" type="text" placeholder="예: 12001"></div>
@@ -154,12 +158,16 @@ let inflight = { auth:null, load:null, mutate:null };
   </section>
 </main>
 
+<!-- 하단 로그 -->
 <div class="logwrap">
   <div id="log" aria-live="polite"></div>
 </div>
 
 <script>
-const state = {{
+/* ===== 전역 상태 ===== */
+let inflight = { auth:null, load:null, mutate:null };
+
+const state = {
   api: '',
   secret: '',
   items: [],
@@ -167,77 +175,286 @@ const state = {{
   uidSet: new Set(),
   selAdd: new Map(),   // name -> count (0..7)
   selEdit: new Map()   // name -> count (0..7)
-}};
+};
 const $ = (q)=>document.querySelector(q);
 const logEl = document.getElementById('log');
-const PLACEHOLDER = {PLACEHOLDER!r};
+const PLACEHOLDER = "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><rect width='100%' height='100%' fill='%23eef'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' font-size='12' fill='%23999'>no image</text></svg>";
 
-function log(msg, kind='ok'){{ const t = new Date().toLocaleTimeString(); const css = kind==='ok' ? 'ok' : 'err'; logEl.innerHTML += `<div><span class="t">[${{t}}]</span> <span class="${{css}}">${{msg}}</span></div>`; logEl.scrollTop = logEl.scrollHeight; }}
-async function getJSON(url){{ const r = await fetch(url); const tx = await r.text(); try{{ return JSON.parse(tx); }}catch(e){{ throw new Error('JSON parse error: '+tx.slice(0,120)); }} }}
-async function postJSON(body){{ const r = await fetch(state.api, {{ method:'POST', body: JSON.stringify(body) }}); const tx = await r.text(); try{{ return JSON.parse(tx); }}catch(e){{ throw new Error('JSON parse error: '+tx.slice(0,120)); }} }}
+/* ===== 유틸 ===== */
+function log(msg, kind='ok'){
+  const t = new Date().toLocaleTimeString();
+  const css = kind==='ok' ? 'ok' : 'err';
+  logEl.innerHTML += `<div><span class="t">[${t}]</span> <span class="${css}">${msg}</span></div>`;
+  logEl.scrollTop = logEl.scrollHeight;
+}
+async function getJSON(url, signal){
+  const r = await fetch(url, { signal });
+  const tx = await r.text();
+  try{ return JSON.parse(tx); }catch(e){ throw new Error('JSON parse error: '+tx.slice(0,120)); }
+}
+async function postJSON(body, signal){
+  const r = await fetch(state.api, { method:'POST', body: JSON.stringify(body), signal });
+  const tx = await r.text();
+  try{ return JSON.parse(tx); }catch(e){ throw new Error('JSON parse error: '+tx.slice(0,120)); }
+}
+function fileToBase64(file){
+  return new Promise((resolve,reject)=>{
+    const reader = new FileReader();
+    reader.onload = ()=>resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+function expandItems(selMap){
+  const arr = [];
+  for(const [name,cnt] of selMap){
+    for(let i=0;i<cnt;i++) arr.push(name);
+  }
+  return arr;
+}
 
-document.getElementById('btn-auth').addEventListener('click', async ()=>{{ state.api = document.getElementById('api').value.trim(); state.secret = document.getElementById('secret').value.trim();
-  try{{ const res = await postJSON({{ type:'auth_check', secret: state.secret }}); if(res && res.ok){{ log('인증 성공','ok'); await loadAll(); }}else{{ log('인증 실패','err'); }} }}
-  catch(e){{ log('인증 오류: '+e.message,'err'); }} }});
+/* ===== 인증 ===== */
+document.getElementById('btn-auth').addEventListener('click', async (e)=>{
+  const btn = e.currentTarget; btn.disabled = true; btn.style.opacity = .6;
+  inflight.auth && inflight.auth.abort(); inflight.auth = new AbortController();
 
-async function loadAll(){{ try{{ const [items, accounts] = await Promise.all([ getJSON(state.api+'?sheet=items'), getJSON(state.api+'?sheet=accounts'), ]);
-    state.items = items || []; state.accounts = accounts || []; state.uidSet = new Set(state.accounts.map(a=>String(a['UID']||'')));
-    renderItemsTable(); renderChips('#chips-add', state.selAdd); renderChips('#chips-edit', state.selEdit);
-    log(`데이터 로드 완료 (아이템 ${{state.items.length}} · 계정 ${{state.accounts.length}})`, 'ok'); }}
-  catch(e){{ log('로드 실패: '+e.message,'err'); }} }}
+  state.api = $('#api').value.trim();
+  state.secret = $('#secret').value.trim();
 
-function renderItemsTable(){{ const tb = document.querySelector('#items-table tbody'); tb.innerHTML = '';
-  state.items.forEach(it=>{{ const name = it['아이템명'] || it['name'] || ''; const url  = it['이미지URL'] || it['url'] || '';
-    const tr = document.createElement('tr'); tr.innerHTML = `
-      <td><img class="thumb" referrerpolicy="no-referrer" loading="lazy" decoding="async" src="${{url}}" alt="" onerror="this.src='${{PLACEHOLDER}}'"></td>
-      <td>${{name}}</td>
-      <td><button class="btn btn-danger btn-sm" data-name="${{name}}">삭제</button></td>`; tb.appendChild(tr); }});
-  tb.querySelectorAll('button[data-name]').forEach(btn=>{{ btn.addEventListener('click', async (e)=>{{ const name = e.currentTarget.getAttribute('data-name'); if(!confirm(`아이템 "${{name}}" 을(를) 삭제할까요?`)) return;
-      try{{ const res = await postJSON({{ type:'item_delete', secret: state.secret, data:{{ name }} }}); if(res && res.ok){{ log(`아이템 삭제 성공: ${{name}}`,'ok'); await loadAll(); }} else {{ log(`아이템 삭제 실패: ${{name}} (${{(res && res.error)||'unknown'}})`,'err'); }} }}
-      catch(err){{ log('아이템 삭제 오류: '+err.message,'err'); }} }}); }}); }}
+  try{
+    const res = await postJSON({ type:'auth_check', secret: state.secret }, inflight.auth.signal);
+    if(res && res.ok){
+      log('인증 성공','ok');
+      await loadAll();
+    }else{
+      log('인증 실패','err');
+    }
+  }catch(err){
+    if(err.name!=='AbortError') log('인증 오류: '+err.message,'err');
+  }finally{
+    btn.disabled = false; btn.style.opacity = 1;
+  }
+});
 
-function renderChips(selector, selMap){{ const wrap = document.querySelector(selector); wrap.innerHTML='';
-  state.items.forEach(it=>{{ const name = it['아이템명'] || it['name'] || ''; if(!name) return; const cnt = selMap.get(name) || 0;
-    const chip = document.createElement('button'); chip.type='button'; chip.className = 'chip' + (cnt>0?' on':''); chip.textContent = name + (cnt>1?` +${{cnt-1}}`:'');
-    chip.setAttribute('data-badge', cnt>1?`+${{cnt-1}}`:'');
-    chip.addEventListener('click', ()=>{{ const cur = selMap.get(name) || 0; const next = cur>=7 ? 0 : cur+1; if(next===0) selMap.delete(name); else selMap.set(name, next); renderChips(selector, selMap); }});
-    wrap.appendChild(chip); }});
-}}
+/* ===== 데이터 로드 ===== */
+async function loadAll(){
+  inflight.load && inflight.load.abort(); inflight.load = new AbortController();
+  try{
+    const [items, accounts] = await Promise.all([
+      getJSON(state.api+'?sheet=items', inflight.load.signal),
+      getJSON(state.api+'?sheet=accounts', inflight.load.signal),
+    ]);
+    state.items = items || [];
+    state.accounts = accounts || [];
+    state.uidSet = new Set(state.accounts.map(a=>String(a['UID']||'')));
+    renderItemsTable();
+    renderChips('#chips-add', state.selAdd);
+    renderChips('#chips-edit', state.selEdit);
+    log(`데이터 로드 완료 (아이템 ${state.items.length} · 계정 ${state.accounts.length})`, 'ok');
+  }catch(e){
+    if(e.name!=='AbortError') log('로드 실패: '+e.message,'err');
+  }
+}
 
-document.getElementById('btn-refresh-items').addEventListener('click', async ()=>{{ try{{ const items = await getJSON(state.api+'?sheet=items'); state.items = items || []; renderItemsTable(); renderChips('#chips-add', state.selAdd); renderChips('#chips-edit', state.selEdit); log('아이템 목록 새로고침 완료','ok'); }}catch(e){{ log('아이템 새로고침 실패: '+e.message,'err'); }} }});
+/* ===== 아이템 테이블 ===== */
+function renderItemsTable(){
+  const tb = document.querySelector('#items-table tbody');
+  tb.innerHTML = '';
+  state.items.forEach(it=>{
+    const name = it['아이템명'] || it['name'] || '';
+    const url  = it['이미지URL'] || it['url'] || '';
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><img class="thumb" referrerpolicy="no-referrer" loading="lazy" decoding="async" src="${url}" alt="" onerror="this.src='${PLACEHOLDER}'"></td>
+      <td>${name}</td>
+      <td><button class="btn btn-danger btn-sm" data-name="${name}">삭제</button></td>
+    `;
+    tb.appendChild(tr);
+  });
+  tb.querySelectorAll('button[data-name]').forEach(btn=>{
+    btn.addEventListener('click', async (e)=>{
+      const name = e.currentTarget.getAttribute('data-name');
+      if(!confirm(`아이템 "${name}" 을(를) 삭제할까요?`)) return;
+      try{
+        const res = await postJSON({ type:'item_delete', secret: state.secret, data:{ name } });
+        if(res && res.ok){
+          log(`아이템 삭제 성공: ${name}`,'ok');
+          await loadAll();
+        }else{
+          log(`아이템 삭제 실패: ${name} (${(res && res.error)||'unknown'})`,'err');
+        }
+      }catch(err){ log('아이템 삭제 오류: '+err.message,'err'); }
+    });
+  });
+}
 
-document.getElementById('btn-item-upload').addEventListener('click', async ()=>{{ const name = (document.getElementById('item-name').value||'').trim(); const fileInput = document.getElementById('item-file'); const file = fileInput.files[0];
-  if(!name || !file){{ log('아이템명/이미지 파일을 입력하세요.','err'); return; }}
-  try{{ const mime = (file.type || '').replace('image/jpg','image/jpeg') || 'image/jpeg'; const base64 = await fileToBase64(file); const pure = base64.split(',')[1];
-    const res = await postJSON({{ type:'item_upload', secret: state.secret, data:{{ name, base64: pure, mime, filename: file.name }} }});
-    if(res && res.ok){{ log(`신규 아이템 등록 성공: ${{name}}`,'ok'); document.getElementById('item-name').value=''; fileInput.value=''; await loadAll(); }}
-    else {{ log('아이템 등록 실패: '+((res&&res.error)||'unknown'),'err'); }} }}
-  catch(e){{ log('아이템 등록 오류: '+e.message,'err'); }} }});
+/* ===== 칩: 1→7→0 사이클 ===== */
+function renderChips(selector, selMap){
+  const wrap = document.querySelector(selector);
+  wrap.innerHTML='';
+  const frag = document.createDocumentFragment();
 
-document.getElementById('btn-save-add').addEventListener('click', async ()=>{{ const UID = (document.getElementById('add-uid').value||'').trim(); const price = Number(document.getElementById('add-price').value||0); const desc = (document.getElementById('add-desc').value||'').trim(); const status = document.getElementById('add-status').value; const auto = document.getElementById('auto-uid').checked; if(!UID){{ log('신규 추가: UID를 입력하세요.','err'); return; }}
-  let finalUID = UID; if(state.uidSet.has(finalUID)){{ if(!auto){{ log('신규 추가: UID가 이미 존재합니다. (충돌)','err'); return; }} const nums = Array.from(state.uidSet).map(s=>Number(s)).filter(n=>!isNaN(n)); const next = (nums.length? Math.max(...nums):10000)+1; finalUID = String(next); log(`UID 충돌 → 자동 발급: ${{finalUID}}`,'ok'); }}
+  state.items.forEach(it=>{
+    const name = it['아이템명'] || it['name'] || '';
+    if(!name) return;
+    const cnt = selMap.get(name) || 0;
+
+    const chip = document.createElement('button');
+    chip.type='button';
+    chip.className = 'chip' + (cnt>0?' on':'');
+    chip.textContent = name + (cnt>1?` +${cnt-1}`:'');
+    chip.setAttribute('data-badge', cnt>1?`+${cnt-1}`:'');
+
+    chip.addEventListener('click', ()=>{
+      const cur = selMap.get(name) || 0;
+      const next = cur>=7 ? 0 : cur+1;   // 7에서 한 번 더 → 0
+      if(next===0) selMap.delete(name);
+      else selMap.set(name, next);
+      renderChips(selector, selMap);
+    });
+
+    frag.appendChild(chip);
+  });
+
+  wrap.appendChild(frag);
+}
+
+/* ===== 새로고침 ===== */
+document.getElementById('btn-refresh-items').addEventListener('click', async ()=>{
+  try{
+    const items = await getJSON(state.api+'?sheet=items');
+    state.items = items || [];
+    renderItemsTable();
+    renderChips('#chips-add', state.selAdd);
+    renderChips('#chips-edit', state.selEdit);
+    log('아이템 목록 새로고침 완료','ok');
+  }catch(e){ log('아이템 새로고침 실패: '+e.message,'err'); }
+});
+
+/* ===== 업로드 (JPEG 보정 유지) ===== */
+document.getElementById('btn-item-upload').addEventListener('click', async ()=>{
+  const name = (document.getElementById('item-name').value||'').trim();
+  const fileInput = document.getElementById('item-file');
+  const file = fileInput.files[0];
+  if(!name || !file){ log('아이템명/이미지 파일을 입력하세요.','err'); return; }
+  try{
+    const base64 = await fileToBase64(file);
+    const pure = base64.split(',')[1];
+    const mime = (file.type || '').replace('image/jpg','image/jpeg') || 'image/jpeg';
+    const res = await postJSON({
+      type:'item_upload', secret: state.secret,
+      data:{ name, base64: pure, mime, filename: file.name }
+    });
+    if(res && res.ok){
+      log(`신규 아이템 등록 성공: ${name}`,'ok');
+      document.getElementById('item-name').value='';
+      fileInput.value='';
+      await loadAll();
+    }else{
+      log('아이템 등록 실패: '+((res&&res.error)||'unknown'),'err');
+    }
+  }catch(e){ log('아이템 등록 오류: '+e.message,'err'); }
+});
+
+/* ===== 신규 저장 ===== */
+document.getElementById('btn-save-add').addEventListener('click', async (e)=>{
+  const UID = (document.getElementById('add-uid').value||'').trim();
+  const price = Number(document.getElementById('add-price').value||0);
+  const desc = (document.getElementById('add-desc').value||'').trim();
+  const status = document.getElementById('add-status').value;
+  const auto = document.getElementById('auto-uid').checked;
+  if(!UID){ log('신규 추가: UID를 입력하세요.','err'); return; }
+
+  let finalUID = UID;
+  if(state.uidSet.has(finalUID)){
+    if(!auto){ log('신규 추가: UID가 이미 존재합니다. (충돌)','err'); return; }
+    const nums = Array.from(state.uidSet).map(s=>Number(s)).filter(n=>!isNaN(n));
+    const next = (nums.length? Math.max(...nums):10000)+1;
+    finalUID = String(next);
+    log(`UID 충돌 → 자동 발급: ${finalUID}`,'ok');
+  }
   const items = expandItems(state.selAdd);
-  try{{ const res = await postJSON({{ type:'account_upsert', secret: state.secret, data:{{ UID: finalUID, desc, status, price, items }} }}); if(res && res.ok){{ log(`신규 계정 저장 성공: UID ${{finalUID}}`,'ok'); document.getElementById('add-uid').value=''; document.getElementById('add-price').value=''; document.getElementById('add-desc').value=''; document.getElementById('add-status').value='판매중'; state.selAdd.clear(); await loadAll(); } else {{ log('신규 계정 저장 실패: '+((res&&res.error)||'unknown'),'err'); }} }}
-  catch(e){{ log('신규 계정 저장 오류: '+e.message,'err'); }} }});
 
-document.getElementById('btn-load-one').addEventListener('click', ()=>{{ const uid = (document.getElementById('edit-uid').value||'').trim(); if(!uid){{ log('수정: UID를 입력하세요.','err'); return; }}
-  const found = state.accounts.find(a=>String(a['UID']||'')===uid); if(!found){{ log('수정: 해당 UID를 찾을 수 없습니다.','err'); return; }}
-  document.getElementById('edit-price').value = Number(found['가격']||0); document.getElementById('edit-desc').value = found['부가설명']||''; document.getElementById('edit-status').value = found['판매상태']||'판매중';
-  state.selEdit.clear(); for(const k in found){{ if(/^포함아이템\d+$/.test(k)){{ const v = (found[k]||'').toString().trim(); if(v) state.selEdit.set(v, (state.selEdit.get(v)||0)+1); }} }}
-  for(const [n,c] of Array.from(state.selEdit.entries())){{ state.selEdit.set(n, Math.min(7,c)); }}
-  renderChips('#chips-edit', state.selEdit); log(`수정: UID ${{uid}} 로드 완료`,'ok'); }});
+  try{
+    const res = await postJSON({ type:'account_upsert', secret: state.secret,
+      data:{ UID: finalUID, desc, status, price, items }});
+    if(res && res.ok){
+      log(`신규 계정 저장 성공: UID ${finalUID}`,'ok');
+      document.getElementById('add-uid').value='';
+      document.getElementById('add-price').value='';
+      document.getElementById('add-desc').value='';
+      document.getElementById('add-status').value='판매중';
+      state.selAdd.clear();
+      await loadAll();
+    }else{
+      log('신규 계정 저장 실패: '+((res&&res.error)||'unknown'),'err');
+    }
+  }catch(e){ log('신규 계정 저장 오류: '+e.message,'err'); }
+});
 
-document.getElementById('btn-save-edit').addEventListener('click', async ()=>{{ const UID = (document.getElementById('edit-uid').value||'').trim(); if(!UID){{ log('수정 저장: UID를 입력하세요.','err'); return; }}
-  const price = Number(document.getElementById('edit-price').value||0); const desc = (document.getElementById('edit-desc').value||'').trim(); const status = document.getElementById('edit-status').value; const items = expandItems(state.selEdit);
-  try{{ const res = await postJSON({{ type:'account_upsert', secret: state.secret, data:{{ UID, desc, status, price, items }} }}); if(res && res.ok){{ log(`계정 수정 저장 성공: UID ${{UID}}`,'ok'); await loadAll(); } else {{ log('계정 수정 저장 실패: '+((res&&res.error)||'unknown'),'err'); }} }}
-  catch(e){{ log('계정 수정 저장 오류: '+e.message,'err'); }} }});
+/* ===== 수정 로드 ===== */
+document.getElementById('btn-load-one').addEventListener('click', ()=>{
+  const uid = (document.getElementById('edit-uid').value||'').trim();
+  if(!uid){ log('수정: UID를 입력하세요.','err'); return; }
+  const found = state.accounts.find(a=>String(a['UID']||'')===uid);
+  if(!found){ log('수정: 해당 UID를 찾을 수 없습니다.','err'); return; }
 
-document.getElementById('btn-delete').addEventListener('click', async ()=>{{ const uid = (document.getElementById('del-uid').value||'').trim(); if(!uid){{ log('삭제: UID를 입력하세요.','err'); return; }}
-  if(!confirm(`정말 UID ${{uid}} 를 삭제할까요?`)) return; try{{ const res = await postJSON({{ type:'account_delete', secret: state.secret, data:{{ uid }} }}); if(res && res.ok){{ log(`uid${{uid}} 계정 삭제 성공`,'ok'); document.getElementById('del-uid').value=''; await loadAll(); } else {{ log('계정 삭제 실패: '+((res&&res.error)||'unknown'),'err'); }} }}
-  catch(e){{ log('계정 삭제 오류: '+e.message,'err'); }} }});
+  document.getElementById('edit-price').value = Number(found['가격']||0);
+  document.getElementById('edit-desc').value = found['부가설명']||'';
+  document.getElementById('edit-status').value = found['판매상태']||'판매중';
 
-function fileToBase64(file){{ return new Promise((resolve,reject)=>{{ const reader = new FileReader(); reader.onload = ()=>resolve(reader.result); reader.onerror = reject; reader.readAsDataURL(file); }}); }}
-function expandItems(selMap){{ const arr = []; for(const [name,cnt] of selMap){{ for(let i=0;i<cnt;i++) arr.push(name); }} return arr; }}
+  state.selEdit.clear();
+  for(const k in found){
+    if(/^포함아이템\d+$/.test(k)){
+      const v = (found[k]||'').toString().trim();
+      if(v) state.selEdit.set(v, (state.selEdit.get(v)||0)+1);
+    }
+  }
+  for(const [n,c] of Array.from(state.selEdit.entries())){
+    state.selEdit.set(n, Math.min(7,c));
+  }
+  renderChips('#chips-edit', state.selEdit);
+  log(`수정: UID ${uid} 로드 완료`,'ok');
+});
+
+/* ===== 수정 저장 ===== */
+document.getElementById('btn-save-edit').addEventListener('click', async ()=>{
+  const UID = (document.getElementById('edit-uid').value||'').trim();
+  if(!UID){ log('수정 저장: UID를 입력하세요.','err'); return; }
+  const price = Number(document.getElementById('edit-price').value||0);
+  const desc = (document.getElementById('edit-desc').value||'').trim();
+  const status = document.getElementById('edit-status').value;
+  const items = expandItems(state.selEdit);
+
+  try{
+    const res = await postJSON({ type:'account_upsert', secret: state.secret,
+      data:{ UID, desc, status, price, items }});
+    if(res && res.ok){
+      log(`계정 수정 저장 성공: UID ${UID}`,'ok');
+      await loadAll();
+    }else{
+      log('계정 수정 저장 실패: '+((res&&res.error)||'unknown'),'err');
+    }
+  }catch(e){ log('계정 수정 저장 오류: '+e.message,'err'); }
+});
+
+/* ===== 삭제 ===== */
+document.getElementById('btn-delete').addEventListener('click', async ()=>{
+  const uid = (document.getElementById('del-uid').value||'').trim();
+  if(!uid){ log('삭제: UID를 입력하세요.','err'); return; }
+  if(!confirm(`정말 UID ${uid} 를 삭제할까요?`)) return;
+
+  try{
+    const res = await postJSON({ type:'account_delete', secret: state.secret, data:{ uid }});
+    if(res && res.ok){
+      log(`uid${uid} 계정 삭제 성공`,'ok');
+      document.getElementById('del-uid').value='';
+      await loadAll();
+    }else{
+      log('계정 삭제 실패: '+((res&&res.error)||'unknown'),'err');
+    }
+  }catch(e){ log('계정 삭제 오류: '+e.message,'err'); }
+});
 </script>
 </body>
 </html>
