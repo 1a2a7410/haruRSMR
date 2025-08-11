@@ -195,36 +195,20 @@ let itemsMap = new Map();
 let accounts = null;
 let selected = new Map(); // name -> count (1..7)
 
-/* ===================== ★ 여기서부터 추가 ===================== */
-// 계정별 포함 아이템 캐시 (성능 개선용)
-const accMeta = new WeakMap(); // acc 객체 -> { items:string[], count:number }
-
-// 청크 렌더 중복 취소용 토큰(이미 쓰고 있으면 유지)
+/* === 캐시/토큰 === */
+const accMeta = new WeakMap(); // acc -> { items:string[], count:number }
 let renderToken = 0;
 
-/** 계정이 보유한 아이템명을 한 번만 모아 캐시에 저장 후 반환 */
 function getAccItems(acc){
-  const cached = accMeta.get(acc);
-  if (cached) return cached.items;
-
-  const arr = [];
-  for (const k in acc) {
-    if (/^포함아이템\d+$/.test(k)) {
-      const v = (acc[k] || '').toString().trim();
-      if (v) arr.push(v);
-    }
-  }
-  accMeta.set(acc, { items: arr, count: arr.length });
-  return arr;
+  const c = accMeta.get(acc);
+  if (c) return c.items;
+  const arr=[]; for(const k in acc){ if(/^포함아이템\d+$/.test(k)){ const v=(acc[k]||'').toString().trim(); if(v) arr.push(v); } }
+  accMeta.set(acc,{items:arr,count:arr.length}); return arr;
 }
-
-/** 계정의 아이템 개수(캐시 우선) */
 function getAccCount(acc){
-  const cached = accMeta.get(acc);
-  if (cached) return cached.count;
-  return getAccItems(acc).length;
+  const c = accMeta.get(acc);
+  return c ? c.count : getAccItems(acc).length;
 }
-/* ===================== ★ 추가 끝 ===================== */
 
 function updateCounts(total, matched){ document.getElementById('counts').textContent = `총 매물 ${total ?? '–'} | 결과 ${matched ?? '–'}`; }
 function itemCount(name){ return selected.get(name) || 0; }
@@ -246,7 +230,7 @@ function updateChips(){
     box.appendChild(chip);
   }
 }
-</script>
+
 function renderItemBadges(){
   document.querySelectorAll('.item').forEach(card=>{
     const name = card.getAttribute('data-name');
@@ -283,9 +267,11 @@ async function renderItems(list){
 }
 
 function itemsFromAccount(acc){
+  // (호환용) 직접 순회 — 정렬/필터에서 캐시가 필요하면 getAccItems 사용
   const arr=[]; for(const k in acc){ if(/^포함아이템\d+$/.test(k)){ const v=(acc[k]||'').toString().trim(); if(v) arr.push(v); } }
   return arr;
 }
+
 function applyFilters(list){
   const q = document.getElementById('uid-q').value.trim();
   const hide = document.getElementById('hide-sold').checked;
@@ -295,15 +281,16 @@ function applyFilters(list){
     if(hide && (a['판매상태']||'')==='판매완료') return false;
     if(want.size){
       const have=new Map();
-      for(const n of itemsFromAccount(a)){ have.set(n,(have.get(n)||0)+1); }
+      for(const n of getAccItems(a)){ have.set(n,(have.get(n)||0)+1); }
       for(const [n,c] of want){ if((have.get(n)||0) < c) return false; }
     }
     return true;
   });
 }
+
 function sortResults(list){
   const v = document.getElementById('sort').value;
-  const ext = list.map(a=>({ a, price:Number(a['가격']||0), cnt:itemsFromAccount(a).length }));
+  const ext = list.map(a=>({ a, price:Number(a['가격']||0), cnt:getAccCount(a) }));
   if(v==='price_desc') ext.sort((x,y)=>y.price-x.price);
   if(v==='price_asc')  ext.sort((x,y)=>x.price-y.price);
   if(v==='count_desc') ext.sort((x,y)=>y.cnt-x.cnt);
@@ -312,7 +299,7 @@ function sortResults(list){
 }
 
 function renderAccountsChunked(list){
-  const box = el('#accounts');
+  const box = document.getElementById('accounts');
   box.innerHTML = '';
 
   if (!list.length) {
@@ -321,10 +308,8 @@ function renderAccountsChunked(list){
     return;
   }
 
-  // 이번 렌더 고유 토큰 (다른 렌더가 시작되면 중단)
-  const myToken = ++renderToken;
-
-  const CHUNK = 80; // 데이터 많으면 60, 여유면 100~120로 조절 가능
+  const myToken = ++renderToken; // 이번 렌더 고유 토큰
+  const CHUNK = 80;
   let i = 0;
 
   function draw(){
@@ -335,7 +320,7 @@ function renderAccountsChunked(list){
 
     for (; i < end; i++) {
       const acc = list[i];
-      const names = itemsFromAccount(acc);
+      const names = getAccItems(acc);
 
       const thumbs = names.slice(0, 11).map(n => {
         const url = (itemsMap.get(n) || '').toString().trim() || PLACEHOLDER;
@@ -345,7 +330,6 @@ function renderAccountsChunked(list){
                      onerror="this.src='${PLACEHOLDER}'">`;
       }).join('');
 
-      // ★ 여기 오타 조심: ${more} (중괄호만 쓰면 안 됨)
       const more = names.length > 11 ? `<span class="more">+${names.length - 11}</span>` : '';
 
       const sold  = (acc['판매상태'] || '') === '판매완료';
@@ -366,14 +350,12 @@ function renderAccountsChunked(list){
         <div class="thumbs">${thumbs}${more}</div>
       </div>`);
 
-      // UID 클릭 → 복사
       card.querySelector('.uid').addEventListener('click', async (e)=>{
         e.stopPropagation();
         try { await navigator.clipboard.writeText(uid); showToast('UID 복사됨'); }
         catch { showToast('복사 실패'); }
       });
 
-      // 카드 클릭 → 상세 모달
       card.addEventListener('click', ()=> openAccModal(acc, names));
 
       frag.appendChild(card);
@@ -388,38 +370,6 @@ function renderAccountsChunked(list){
   }
 
   (window.requestIdleCallback || window.requestAnimationFrame || setTimeout)(draw, 0);
-}
-  const CHUNK = 80; // 살짝 키워서 DOM 호출 횟수 줄임
-  let i = 0;
-  function draw(){
-    const frag = document.createDocumentFragment();
-    const end = Math.min(i+CHUNK, total);
-    for(; i<end; i++){ const acc = list[i];
-      const names = itemsFromAccount(acc);
-      const thumbs = names.slice(0,11).map(n=>{ const url = (itemsMap.get(n)||'').toString().trim() || PLACEHOLDER;
-        return `<img loading="lazy" decoding="async" fetchpriority="low" referrerpolicy="no-referrer" src="${url}" alt="${n}" title="${n}" onerror="this.src='${PLACEHOLDER}'">`; }).join('');
-      const more = names.length>11 ? `<span class="more">+${names.length-11}</span>` : '';
-      const sold = (acc['판매상태']||'')==='판매완료';
-      const price = Number(acc['가격']||0).toLocaleString('ko-KR');
-      const uid = acc['UID']||'';
-      const desc = acc['부가설명']||'';
-      const card = h(`<div class="acc ${sold?'sold':''}" role="button">
-        <h3><span class="uid" title="탭하면 복사">${uid}</span><span class="price">${price}원</span></h3>
-        <div style="display:flex; gap:8px; align-items:center; margin-bottom:8px;">
-          <span class="pill">${sold?'판매완료':'판매중'}</span>
-          <span class="mut">${desc}</span>
-          <span class="mut">· 아이템 ${names.length}개</span>
-        </div>
-        <div class="thumbs">${thumbs}${more}</div>
-      </div>`);
-      card.querySelector('.uid').addEventListener('click', async (e)=>{ e.stopPropagation(); try{ await navigator.clipboard.writeText(uid); showToast('UID 복사됨'); }catch{ showToast('복사 실패'); } });
-      card.addEventListener('click', ()=> openAccModal(acc, names));
-      frag.appendChild(card); }
-    box.appendChild(frag);
-    updateCounts(accounts.length, list.length);
-    if(i < total) (window.requestIdleCallback||setTimeout)(draw, 0);
-  }
-  (window.requestIdleCallback||setTimeout)(draw, 0);
 }
 
 async function runSearch(){
@@ -438,6 +388,9 @@ function flashDone(){ let f = document.getElementById('flash'); f.classList.add(
 
 document.getElementById('btn-search').addEventListener('click', runSearch);
 document.getElementById('btn-clear').addEventListener('click', ()=>{ selected.clear(); updateChips(); renderItems(Array.from(itemsMap, ([아이템명, 이미지URL])=>({아이템명, 이미지URL}))); });
+
+// 구매문의 버튼 링크 주입
+document.getElementById('btn-buy').setAttribute('href', KAKAO);
 
 document.getElementById('btn-help').addEventListener('click', ()=>{ const m = document.getElementById('help-modal'); m.classList.add('on'); m.setAttribute('aria-hidden','false'); });
 document.getElementById('help-close').addEventListener('click', ()=>{ const m = document.getElementById('help-modal'); m.classList.remove('on'); m.setAttribute('aria-hidden','true'); });
@@ -475,7 +428,6 @@ async function loadItems(){
   ctrlItems && ctrlItems.abort();
   ctrlItems = new AbortController();
   const list = await fetchJSON(API_BASE + "?sheet=items", ctrlItems.signal);
-  // Map만 미리 만들어두고, 렌더는 다음 프레임으로 밀어 초기 로딩 체감 개선
   itemsMap = new Map(list.map(it=>[it['아이템명']||it['name'], (it['이미지URL']||it['url']||'').toString().trim()]));
   requestAnimationFrame(()=> renderItems(list));
 }
