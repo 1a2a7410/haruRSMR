@@ -137,49 +137,48 @@
   .acc-detail .thumbs { grid-template-columns: repeat(6, 1fr); }
 }
 
-/* 상세 썸네일: 그리드 유지, 동일 테두리/높이 규칙 */
+/* 상세 썸네일: 모바일 6칸 고정 + 이미지 높이 동일 */
 .acc-detail .thumbs {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr)); /* 모바일: 정확히 6칸 */
-  gap: 6px 4px;  /* 가로 여백만 살짝 줄여 가로 스크롤 방지 */
+  grid-template-columns: repeat(6, 1fr); /* 모바일: 정확히 6칸 */
+  gap: 6px 4px; /* 좌우 여백 살짝 축소 */
   justify-content: start;
 }
 
 @media (min-width: 481px) {
-  /* 큰 화면에선 자동 채움 + 최소 64px 셀 */
   .acc-detail .thumbs { grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); }
 }
 
 .acc-detail .thumbs > * {
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  gap:4px;
-  width:100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
 }
 
 .acc-detail .thumbs img {
-  width:100%;
-  aspect-ratio:1/1;      /* 정사각형 → 텍스트 줄 수와 무관하게 이미지 높이 동일 */
-  height:auto;
-  border-radius:8px;
-  object-fit:cover;
-  background:#f3f4f6;
-  border:1.5px solid transparent; /* 등급 테두리 두께 1.5px 유지(불투명 색상은 아래 .g4~6) */
+  display: block;
+  width: 100%;
+  aspect-ratio: 1 / 1; /* 정사각형 → 텍스트 줄 수와 무관하게 동일 높이 */
+  height: auto;
+  border-radius: 8px;
+  object-fit: cover;
+  background: #f3f4f6;
+  border: 1.5px solid transparent;
 }
 
-.acc-detail .thumbs small{
-  display:-webkit-box;
-  -webkit-line-clamp:2;
-  -webkit-box-orient:vertical;
-  overflow:hidden;
-  text-align:center;
-  width:100%;
-  line-height:14px;
-  max-height:28px;        /* 2줄 고정 */
-  color:#6b7280;
-  font-size:11px;
-  word-break:keep-all;
+.acc-detail .thumbs small {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  width: 100%;
+  text-align: center;
+  line-height: 14px;
+  max-height: 28px; /* 2줄 고정 */
+  color: #6b7280;
+  font-size: 11px;
+  word-break: keep-all;
 }
 .acc-detail .thumbs > * { justify-self: start; }
 .acc-detail .label { display:inline-block; min-width:110px; font-size:13px; color:#6b7280; }
