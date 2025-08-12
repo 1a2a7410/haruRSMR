@@ -32,11 +32,16 @@
   @media (min-width:901px) { .grid { grid-template-columns: repeat(14, 1fr); } }
 
   .item { border:1px solid var(--line); border-radius:10px; background:#fff; padding:6px; display:flex; flex-direction:column; gap:6px; align-items:center; cursor:pointer; position:relative; }
-  .item img { width:100%; aspect-ratio:1/1; object-fit:cover; border-radius:8px; background:#f3f4f6; }
+  .item img { width:100%; aspect-ratio:1/1; object-fit:cover; border-radius:8px; background:#f3f4f6; border:2px solid transparent; }
   .item small { color:#6b7280; font-size:11px; text-align:center; }
   .item.selected { outline:3px solid #10b981; outline-offset:2px; }
   .item .badge { position:absolute; right:6px; top:6px; background:#f3f4f6; color:#6b7280; border:1px solid #e5e7eb; border-radius:999px; font-size:11px; padding:2px 6px; display:none; }
   .item.hasCount .badge { display:inline-block; }
+
+  /* 등급별 테두리 */
+  .g4 { border-color:#de72fc !important; }
+  .g5 { border-color:#ffea4a !important; }
+  .g6 { border-color:#ffa347 !important; }
 
   .hint { margin:10px 0; color:#6b7280; font-size:13px; }
 
@@ -47,7 +52,7 @@
   .acc h3 .uid:hover { color:#0ea5e9; text-decoration:underline; }
   .price { font-weight:800; color:#111827; }
   .thumbs { display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
-  .thumbs img { width:48px; height:48px; border-radius:8px; object-fit:cover; background:#f3f4f6; }
+  .thumbs img { width:48px; height:48px; border-radius:8px; object-fit:cover; background:#f3f4f6; border:2px solid transparent; }
   .thumbs .more { font-size:12px; color:#6b7280; }
 
   .sold { opacity:.55 }
@@ -96,26 +101,19 @@
   .acc-modal .box { width:min(720px, 96vw); }
   .acc-detail { padding:12px 14px 16px; }
   .acc-detail .row { display:flex; align-items:center; gap:8px; margin:8px 0; flex-wrap:wrap; }
-  /* 기본: 태블릿·PC → 기존 크기 비율에 맞춘 가변 그리드 */
-.acc-detail .thumbs {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
-  gap: 10px 8px;
-  justify-content: start;
-}
-
-/* 모바일(480px 이하) → 6개 고정 */
-@media (max-width: 480px) {
+  /* 기본: 태블릿·PC → 기존 비율에 맞춘 가변 그리드 */
   .acc-detail .thumbs {
-    grid-template-columns: repeat(6, 1fr);
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+    gap: 10px 8px;
+    justify-content: start;
   }
-}
-
-/* 각 칸 내부 아이템 컨테이너 정렬 */
-.acc-detail .thumbs > * {
-  justify-self: start;
-}
-  .acc-detail .thumbs img { width:48px; height:48px; border-radius:8px; object-fit:cover; background:#f3f4f6; }
+  /* 모바일(480px 이하) → 6개 고정 */
+  @media (max-width: 480px) {
+    .acc-detail .thumbs { grid-template-columns: repeat(6, 1fr); }
+  }
+  .acc-detail .thumbs > * { justify-self: start; }
+  .acc-detail .thumbs img { width:48px; height:48px; border-radius:8px; object-fit:cover; background:#f3f4f6; border:2px solid transparent; }
   .acc-detail .label { display:inline-block; min-width:110px; font-size:13px; color:#6b7280; }
 </style>
 </head>
@@ -216,13 +214,18 @@ const $ = (q)=>document.querySelector(q);
 function h(html){ const d=document.createElement('div'); d.innerHTML=html.trim(); return d.firstChild; }
 function cleanUrl(u){ if(!u) return u; if(/\.jrg$/i.test(u)) u=u.replace(/\.jrg$/i,'.jpg'); return u; }
 
-let itemsMap = new Map();
+let itemsMap = new Map(); // name -> { url, grade(4|5|6) }
 let accounts = null;
 let selected = new Map(); // name -> count (1..7)
 
 /* === 캐시/토큰 === */
 const accMeta = new WeakMap(); // acc -> { items:string[], count:number }
 let renderToken = 0;
+
+/* === 등급 보조 === */
+const G_ORDER = {6:3, 5:2, 4:1, 0:0};
+function toGrade(v){ const n = Number(v); return (n===4||n===5||n===6) ? n : 0; }
+function gradeClass(g){ return g===6?'g6' : g===5?'g5' : g===4?'g4' : ''; }
 
 /* === 오버레이 안전히 닫기 === */
 function hideOverlay(){
@@ -273,14 +276,23 @@ function renderItemBadges(){
 }
 
 async function renderItems(list){
+  // 정렬: 6성,5성,4성 순
+  list.sort((a,b)=>{
+    const ga = toGrade(a['등급']||a['grade']);
+    const gb = toGrade(b['등급']||b['grade']);
+    return G_ORDER[gb]-G_ORDER[ga];
+  });
+
   const box = document.getElementById('items'); box.innerHTML='';
   const frag = document.createDocumentFragment();
   for(const it of list){
     const name = it['아이템명'] || it['name'] || '';
     const img  = cleanUrl((it['이미지URL'] || it['url'] || '').toString().trim());
+    const g    = toGrade(it['등급']||it['grade']);
+    const cls  = gradeClass(g);
     const card = h(`<div class="item" data-name="${name}">
       <span class="badge"></span>
-      <img loading="lazy" decoding="async" fetchpriority="low" referrerpolicy="no-referrer" src="${img || PLACEHOLDER}" alt="${name}" onerror="this.src='${PLACEHOLDER}'">
+      <img class="${cls}" loading="lazy" decoding="async" fetchpriority="low" referrerpolicy="no-referrer" src="${img || PLACEHOLDER}" alt="${name}" onerror="this.src='${PLACEHOLDER}'">
       <small>${name}</small>
     </div>`);
     card.addEventListener('click', ()=>{
@@ -294,11 +306,6 @@ async function renderItems(list){
   }
   box.appendChild(frag);
   renderItemBadges();
-}
-
-function itemsFromAccount(acc){
-  const arr=[]; for(const k in acc){ if(/^포함아이템\d+$/.test(k)){ const v=(acc[k]||'').toString().trim(); if(v) arr.push(v); } }
-  return arr;
 }
 
 function applyFilters(list){
@@ -327,6 +334,11 @@ function sortResults(list){
   return ext.map(x=>x.a);
 }
 
+function gradeOfName(name){
+  const meta = itemsMap.get(name);
+  return meta ? meta.grade : 0;
+}
+
 function renderAccountsChunked(list){
   const box = document.getElementById('accounts');
   box.innerHTML = '';
@@ -337,23 +349,26 @@ function renderAccountsChunked(list){
     return;
   }
 
-  const myToken = ++renderToken; // 이번 렌더 고유 토큰
+  const myToken = ++renderToken;
   const CHUNK = 80;
   let i = 0;
 
   function draw(){
-    if (myToken !== renderToken) return; // 이전 렌더 취소
+    if (myToken !== renderToken) return;
 
     const frag = document.createDocumentFragment();
     const end = Math.min(i + CHUNK, list.length);
 
     for (; i < end; i++) {
       const acc = list[i];
-      const names = getAccItems(acc);
+      // 썸네일 표시 순서: 6 → 5 → 4
+      const names = getAccItems(acc).slice().sort((a,b)=>G_ORDER[gradeOfName(b)]-G_ORDER[gradeOfName(a)]);
 
       const thumbs = names.slice(0, 11).map(n => {
-        const url = (itemsMap.get(n) || '').toString().trim() || PLACEHOLDER;
-        return `<img loading="lazy" decoding="async" fetchpriority="low"
+        const meta = itemsMap.get(n) || {url:'',grade:0};
+        const url  = (meta.url || '').toString().trim() || PLACEHOLDER;
+        const cls  = gradeClass(meta.grade);
+        return `<img class="${cls}" loading="lazy" decoding="async" fetchpriority="low"
                      referrerpolicy="no-referrer"
                      src="${url}" alt="${n}" title="${n}"
                      onerror="this.src='${PLACEHOLDER}'">`;
@@ -416,7 +431,7 @@ function showToast(msg='복사됨'){ const t = document.getElementById('toast');
 function flashDone(){ let f = document.getElementById('flash'); f.classList.add('on'); clearTimeout(f._t); f._t=setTimeout(()=> f.classList.remove('on'), 650); }
 
 document.getElementById('btn-search').addEventListener('click', runSearch);
-document.getElementById('btn-clear').addEventListener('click', ()=>{ selected.clear(); updateChips(); renderItems(Array.from(itemsMap, ([아이템명, 이미지URL])=>({아이템명, 이미지URL}))); });
+document.getElementById('btn-clear').addEventListener('click', ()=>{ selected.clear(); updateChips(); renderItems(Array.from(itemsMap, ([아이템명, meta])=>({아이템명, 이미지URL: meta.url, 등급: meta.grade}))); });
 
 // 구매문의 버튼 링크 주입
 document.getElementById('btn-buy').setAttribute('href', KAKAO);
@@ -432,11 +447,19 @@ function openAccModal(acc, names){
   const uid = acc['UID']||'';
   const desc = acc['부가설명']||'';
   const price = Number(acc['가격']||0).toLocaleString('ko-KR');
-  const thumbs = names.map(n=>{ const url = (itemsMap.get(n)||'').toString().trim() || PLACEHOLDER;
+
+  // 정렬: 6 → 5 → 4
+  const sorted = names.slice().sort((a,b)=>G_ORDER[gradeOfName(b)]-G_ORDER[gradeOfName(a)]);
+
+  const thumbs = sorted.map(n=>{ 
+    const meta = itemsMap.get(n) || {url:'',grade:0};
+    const url  = (meta.url || '').toString().trim() || PLACEHOLDER;
+    const cls  = gradeClass(meta.grade);
     return `<div style="display:flex;flex-direction:column;align-items:center;gap:4px">
-      <img loading="lazy" decoding="async" referrerpolicy="no-referrer" src="${url}" alt="${n}" title="${n}" onerror="this.src='${PLACEHOLDER}'" width="48" height="48" style="border-radius:8px;object-fit:cover;background:#f3f4f6">
+      <img class="${cls}" loading="lazy" decoding="async" referrerpolicy="no-referrer" src="${url}" alt="${n}" title="${n}" onerror="this.src='${PLACEHOLDER}'" width="48" height="48" style="border-radius:8px;object-fit:cover;background:#f3f4f6;border-width:2px;border-style:solid">
       <small style="color:#6b7280;font-size:11px;text-align:center;max-width:64px;word-break:keep-all">${n}</small>
     </div>`; }).join('');
+
   box.innerHTML = `
     <div class="row"><span class="label">UID</span><strong style="font-size:15px">${uid}</strong></div>
     <div class="row"><span class="label">모든 캐릭터 현황</span></div>
@@ -463,14 +486,21 @@ async function loadItems(){
   ctrlItems = new AbortController();
   try {
     const list = await fetchJSON(API_BASE + "?sheet=items", ctrlItems.signal);
-    itemsMap = new Map(list.map(it=>[it['아이템명']||it['name'], (it['이미지URL']||it['url']||'').toString().trim()]));
+    // map: name -> { url, grade }
+    itemsMap = new Map(list.map(it=>{
+      const name = it['아이템명']||it['name'];
+      const url  = (it['이미지URL']||it['url']||'').toString().trim();
+      const g    = toGrade(it['등급']||it['grade']);
+      return [name, { url, grade: g }];
+    }));
     requestAnimationFrame(()=> renderItems(list));
   } catch (e) {
     console.warn('items load failed', e);
-    requestAnimationFrame(()=> renderItems([])); // 빈 목록이라도 그려서 화면 전환
+    requestAnimationFrame(()=> renderItems([]));
     showToast('아이템 로드 실패 · 다시 시도하세요');
   } finally {
-    hideOverlay(); // 어떤 경우든 오버레이 내림
+    hideOverlay();
+    updateCounts(undefined, undefined);
   }
 }
 
@@ -485,17 +515,10 @@ async function loadAccountsIfNeeded(){
 }
 
 (async function boot(){
-  // 5초 안전장치: 혹시 오버레이가 안 내려가면 강제로 내리기
   const killer = setTimeout(hideOverlay, 5000);
-  try{
-    await loadItems();
-  }catch(e){
-    console.warn('boot failed', e);
-  }finally{
-    clearTimeout(killer);
-    hideOverlay();
-    updateCounts(undefined, undefined);
-  }
+  try{ await loadItems(); }
+  catch(e){ console.warn('boot failed', e); }
+  finally{ clearTimeout(killer); hideOverlay(); }
 })();
 </script>
 </body>
