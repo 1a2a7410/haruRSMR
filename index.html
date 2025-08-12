@@ -33,12 +33,10 @@
 
   .item { border:1px solid var(--line); border-radius:10px; background:#fff; padding:4px; display:flex; flex-direction:column; gap:6px; align-items:center; cursor:pointer; position:relative; } /* ← padding 6px → 4px */
 /* 모든 아이템 이미지(메인, 상세, 썸네일)에 세로 20% 길게 적용 */
-.item img,
-.acc-detail .thumbs img,
-.thumbs img {
+.item img {
   display: block;
   width: 100%;
-  aspect-ratio: 5 / 6;  /* 가로:세로 = 5:6 → 세로가 약 20% 길어짐 */
+  aspect-ratio: 10 / 11; /* 가로:세로 = 10:11 → 세로가 약 10% 길어짐 */
   height: auto;
   object-fit: cover;
   border-radius: 8px;
