@@ -96,7 +96,25 @@
   .acc-modal .box { width:min(720px, 96vw); }
   .acc-detail { padding:12px 14px 16px; }
   .acc-detail .row { display:flex; align-items:center; gap:8px; margin:8px 0; flex-wrap:wrap; }
-  .acc-detail .thumbs { display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
+  /* 기본: 태블릿·PC → 기존 크기 비율에 맞춘 가변 그리드 */
+.acc-detail .thumbs {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+  gap: 10px 8px;
+  justify-content: start;
+}
+
+/* 모바일(480px 이하) → 6개 고정 */
+@media (max-width: 480px) {
+  .acc-detail .thumbs {
+    grid-template-columns: repeat(6, 1fr);
+  }
+}
+
+/* 각 칸 내부 아이템 컨테이너 정렬 */
+.acc-detail .thumbs > * {
+  justify-self: start;
+}
   .acc-detail .thumbs img { width:48px; height:48px; border-radius:8px; object-fit:cover; background:#f3f4f6; }
   .acc-detail .label { display:inline-block; min-width:110px; font-size:13px; color:#6b7280; }
 </style>
