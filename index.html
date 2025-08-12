@@ -26,21 +26,22 @@
   .chip { background:#f0fdf4; color:#065f46; border:1px solid #bbf7d0; border-radius:999px; padding:4px 8px; font-size:12px; cursor:pointer; user-select:none; }
 
   main { padding:12px 14px 90px; }
-  /* 간격을 살짝 더 촘촘히 */
-  .grid { display:grid; gap:8px; }
+  .grid { display:grid; gap:10px; }
   @media (max-width:480px) { .grid { grid-template-columns: repeat(6, 1fr); } }
   @media (min-width:481px) and (max-width:900px) { .grid { grid-template-columns: repeat(12, 1fr); } }
   @media (min-width:901px) { .grid { grid-template-columns: repeat(14, 1fr); } }
 
-  /* 카드 내부 간격 조금 줄여 이미지 공간 확보 */
-  .item { border:1px solid var(--line); border-radius:10px; background:#fff; padding:5px; display:flex; flex-direction:column; gap:5px; align-items:center; cursor:pointer; position:relative; }
-  /* 이미지 비율 유지 + 모두 같은 크기, 테두리 기본 1px (등급 적용 시 1.5px로 증가) */
-  .item img { width:100%; aspect-ratio:1/1; object-fit:cover; border-radius:8px; background:#f3f4f6; border:1px solid transparent; }
-  /* 텍스트 좌우 여백 살짝 축소(테두리 밖으로 안 나가게) */
-  .item small { color:#6b7280; font-size:11px; text-align:center; padding:0 2px; }
+  .item { border:1px solid var(--line); border-radius:10px; background:#fff; padding:6px; display:flex; flex-direction:column; gap:6px; align-items:center; cursor:pointer; position:relative; }
+  .item img { width:100%; aspect-ratio:1/1; object-fit:cover; border-radius:8px; background:#f3f4f6; border:1.5px solid transparent; } /* 1.5px */
+  .item small { color:#6b7280; font-size:11px; text-align:center; }
   .item.selected { outline:3px solid #10b981; outline-offset:2px; }
   .item .badge { position:absolute; right:6px; top:6px; background:#f3f4f6; color:#6b7280; border:1px solid #e5e7eb; border-radius:999px; font-size:11px; padding:2px 6px; display:none; }
   .item.hasCount .badge { display:inline-block; }
+
+  /* 등급별 테두리 (불투명) */
+  .g4 { border-color:#de72fc !important; border-width:1.5px !important; border-style:solid !important; }
+  .g5 { border-color:#ffea4a !important; border-width:1.5px !important; border-style:solid !important; }
+  .g6 { border-color:#ffa347 !important; border-width:1.5px !important; border-style:solid !important; }
 
   .hint { margin:10px 0; color:#6b7280; font-size:13px; }
 
@@ -50,9 +51,8 @@
   .acc h3 .uid { font-weight:800; cursor:pointer; }
   .acc h3 .uid:hover { color:#0ea5e9; text-decoration:underline; }
   .price { font-weight:800; color:#111827; }
-  /* 매물 썸네일도 동일 규칙(기본 1px, 등급시 1.5px 반투명) */
   .thumbs { display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
-  .thumbs img { width:48px; height:48px; border-radius:8px; object-fit:cover; background:#f3f4f6; border:1px solid transparent; }
+  .thumbs img { width:48px; height:48px; border-radius:8px; object-fit:cover; background:#f3f4f6; border:1.5px solid transparent; } /* 1.5px */
   .thumbs .more { font-size:12px; color:#6b7280; }
 
   .sold { opacity:.55 }
@@ -101,55 +101,43 @@
   .acc-modal .box { width:min(720px, 96vw); }
   .acc-detail { padding:12px 14px 16px; }
   .acc-detail .row { display:flex; align-items:center; gap:8px; margin:8px 0; flex-wrap:wrap; }
-  /* 상세 썸네일: 그리드 유지, 동일 테두리 규칙 */
-.acc-detail .thumbs {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
-  gap: 10px 8px;
-  justify-content: start;
-}
-@media (max-width: 480px) {
-  .acc-detail .thumbs { grid-template-columns: repeat(6, 1fr); }
-}
 
-/* 각 셀을 동일 레이아웃로 고정: 이미지+텍스트 높이 균일화 */
-.acc-detail .thumbs > div {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  width: 64px;          /* 그리드 최소폭과 맞춤 */
-}
+  /* 상세 썸네일: 6열 고정, 간격 축소 → 가로 스크롤 방지, 세로 스크롤 */
+  .acc-detail .thumbs {
+    display:grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap:6px 6px;
+    justify-content:start;
+  }
+  .acc-detail .thumbs > * {
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:4px;
+    width:100%;
+  }
+  .acc-detail .thumbs img {
+    width:100%;
+    aspect-ratio:1/1;   /* 정사각형 유지 */
+    height:auto;
+    border-radius:8px;
+    object-fit:cover;
+    background:#f3f4f6;
+    border:1.5px solid transparent; /* 1.5px */
+  }
+  .acc-detail .thumbs small {
+    display:block;
+    width:100%;
+    color:#6b7280;
+    font-size:11px;
+    text-align:center;
+    line-height:14px;
+    max-height:28px;     /* 2줄 */
+    overflow:hidden;
+    word-break:keep-all;
+  }
 
-/* 이미지: 비율 유지, 모든 썸네일 동일 크기, 등급 테두리 기본값 2px */
-.acc-detail .thumbs img {
-  width: 48px;
-  height: 48px;
-  border-radius: 8px;
-  object-fit: cover;
-  background: #f3f4f6;
-  border: 2px solid transparent; /* 두께 2px */
-}
-
-/* 아이템 이름: 2줄 고정 높이 → 셀 높이 균일 */
-.acc-detail .thumbs small {
-  display: block;
-  max-width: 64px;
-  color: #6b7280;
-  font-size: 11px;
-  text-align: center;
-  height: 28px;         /* 2줄 × 14px */
-  line-height: 14px;
-  overflow: hidden;     /* 넘치는 텍스트는 숨김 */
-  word-break: keep-all; /* 단어 단위 줄바꿈 */
-}
-/* 등급별 테두리 (불투명 100%, 두께 2px) */
-.g4 { border-color: #de72fc !important; border-width: 2px !important; border-style: solid !important; }
-.g5 { border-color: #ffea4a !important; border-width: 2px !important; border-style: solid !important; }
-.g6 { border-color: #ffa347 !important; border-width: 2px !important; border-style: solid !important; }
-
-.acc-detail .label { display:inline-block; min-width:110px; font-size:13px; color:#6b7280; }
-
+  .acc-detail .label { display:inline-block; min-width:110px; font-size:13px; color:#6b7280; }
 </style>
 </head>
 <body>
@@ -255,13 +243,12 @@ const G_ORDER = {6:3, 5:2, 4:1, 0:0};
 function toGrade(v){ const n = Number(v); return (n===4||n===5||n===6) ? n : 0; }
 function gradeClass(g){ return g===6?'g6' : g===5?'g5' : g===4?'g4' : ''; }
 
-/* === 오버레이 === */
+/* === 오버레이 안전히 닫기 === */
 function hideOverlay(){
   const ov = document.getElementById('overlay');
   if (ov) { ov.style.display='none'; ov.setAttribute('aria-hidden','true'); }
 }
 
-/* === 유틸 === */
 function getAccItems(acc){
   const c = accMeta.get(acc);
   if (c) return c.items;
@@ -461,7 +448,10 @@ function flashDone(){ let f = document.getElementById('flash'); f.classList.add(
 
 document.getElementById('btn-search').addEventListener('click', runSearch);
 document.getElementById('btn-clear').addEventListener('click', ()=>{ selected.clear(); updateChips(); renderItems(Array.from(itemsMap, ([아이템명, meta])=>({아이템명, 이미지URL: meta.url, 등급: meta.grade}))); });
+
+// 구매문의 버튼 링크 주입
 document.getElementById('btn-buy').setAttribute('href', KAKAO);
+
 document.getElementById('btn-help').addEventListener('click', ()=>{ const m = document.getElementById('help-modal'); m.classList.add('on'); m.setAttribute('aria-hidden','false'); });
 document.getElementById('help-close').addEventListener('click', ()=>{ const m = document.getElementById('help-modal'); m.classList.remove('on'); m.setAttribute('aria-hidden','true'); });
 document.getElementById('acc-close').addEventListener('click', ()=>{ const m = document.getElementById('acc-modal'); m.classList.remove('on'); m.setAttribute('aria-hidden','true'); });
@@ -482,9 +472,10 @@ function openAccModal(acc, names){
     const url  = (meta.url || '').toString().trim() || PLACEHOLDER;
     const cls  = gradeClass(meta.grade);
     return `<div style="display:flex;flex-direction:column;align-items:center;gap:4px">
-      <img class="${cls}" loading="lazy" decoding="async" referrerpolicy="no-referrer" src="${url}" alt="${n}" title="${n}" onerror="this.src='${PLACEHOLDER}'" width="48" height="48" style="border-radius:8px;object-fit:cover;background:#f3f4f6;border-style:solid">
-      <small style="color:#6b7280;font-size:11px;text-align:center;max-width:64px;word-break:keep-all">${n}</small>
-    </div>`; }).join('');
+      <img class="${cls}" loading="lazy" decoding="async" referrerpolicy="no-referrer" src="${url}" alt="${n}" title="${n}" onerror="this.src='${PLACEHOLDER}'">
+      <small style="color:#6b7280;font-size:11px;text-align:center;max-width:100%;word-break:keep-all">${n}</small>
+    </div>`;
+  }).join('');
 
   box.innerHTML = `
     <div class="row"><span class="label">UID</span><strong style="font-size:15px">${uid}</strong></div>
@@ -510,15 +501,24 @@ let ctrlItems = null;
 async function loadItems(){
   ctrlItems && ctrlItems.abort();
   ctrlItems = new AbortController();
-  const list = await fetchJSON(API_BASE + "?sheet=items", ctrlItems.signal);
-  // map: name -> { url, grade }
-  itemsMap = new Map(list.map(it=>{
-    const name = it['아이템명']||it['name'];
-    const url  = (it['이미지URL']||it['url']||'').toString().trim();
-    const g    = toGrade(it['등급']||it['grade']);
-    return [name, { url, grade: g }];
-  }));
-  requestAnimationFrame(()=> renderItems(list));
+  try {
+    const list = await fetchJSON(API_BASE + "?sheet=items", ctrlItems.signal);
+    // map: name -> { url, grade }
+    itemsMap = new Map(list.map(it=>{
+      const name = it['아이템명']||it['name'];
+      const url  = (it['이미지URL']||it['url']||'').toString().trim();
+      const g    = toGrade(it['등급']||it['grade']);
+      return [name, { url, grade: g }];
+    }));
+    requestAnimationFrame(()=> renderItems(list));
+  } catch (e) {
+    console.warn('items load failed', e);
+    requestAnimationFrame(()=> renderItems([]));
+    showToast('아이템 로드 실패 · 다시 시도하세요');
+  } finally {
+    hideOverlay();
+    updateCounts(undefined, undefined);
+  }
 }
 
 let ctrlAcc = null;
@@ -531,17 +531,11 @@ async function loadAccountsIfNeeded(){
   return accounts;
 }
 
-/* ===== 안정적인 로딩 화면 표시 (최소 0.8초 유지 & 아이템/계정 모두 로드 후 종료) ===== */
 (async function boot(){
-  const start = Date.now();
-  try { await Promise.all([loadItems(), loadAccountsIfNeeded()]); }
-  catch(e){ console.warn('boot load error', e); }
-  finally{
-    const elapsed = Date.now() - start;
-    const remain = Math.max(0, 800 - elapsed); // 최소 0.8초
-    setTimeout(hideOverlay, remain);
-    updateCounts(undefined, undefined);
-  }
+  const killer = setTimeout(hideOverlay, 5000);
+  try{ await loadItems(); }
+  catch(e){ console.warn('boot failed', e); }
+  finally{ clearTimeout(killer); hideOverlay(); }
 })();
 </script>
 </body>
