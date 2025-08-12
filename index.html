@@ -199,6 +199,12 @@ let selected = new Map(); // name -> count (1..7)
 const accMeta = new WeakMap(); // acc -> { items:string[], count:number }
 let renderToken = 0;
 
+/* === 오버레이 안전히 닫기 === */
+function hideOverlay(){
+  const ov = document.getElementById('overlay');
+  if (ov) { ov.style.display='none'; ov.setAttribute('aria-hidden','true'); }
+}
+
 function getAccItems(acc){
   const c = accMeta.get(acc);
   if (c) return c.items;
@@ -263,11 +269,9 @@ async function renderItems(list){
   }
   box.appendChild(frag);
   renderItemBadges();
-  const ov = document.getElementById('overlay'); if (ov) { ov.style.display='none'; ov.setAttribute('aria-hidden','true'); }
 }
 
 function itemsFromAccount(acc){
-  // (호환용) 직접 순회 — 정렬/필터에서 캐시가 필요하면 getAccItems 사용
   const arr=[]; for(const k in acc){ if(/^포함아이템\d+$/.test(k)){ const v=(acc[k]||'').toString().trim(); if(v) arr.push(v); } }
   return arr;
 }
@@ -419,18 +423,32 @@ function openAccModal(acc, names){
 }
 
 async function fetchJSON(url, signal){
-  const r = await fetch(url, { headers: { 'Content-Type':'text/plain;charset=utf-8' }, signal });
+  const r = await fetch(url, { signal, cache: 'no-store' });
   const txt = await r.text();
-  try{ return JSON.parse(txt); }catch(e){ throw new Error('JSON parse error: '+txt.slice(0,200)); }
+  try { return JSON.parse(txt); }
+  catch(e){
+    console.warn('JSON parse error:', txt.slice(0, 200));
+    throw new Error('JSON parse error');
+  }
 }
+
 let ctrlItems = null;
 async function loadItems(){
   ctrlItems && ctrlItems.abort();
   ctrlItems = new AbortController();
-  const list = await fetchJSON(API_BASE + "?sheet=items", ctrlItems.signal);
-  itemsMap = new Map(list.map(it=>[it['아이템명']||it['name'], (it['이미지URL']||it['url']||'').toString().trim()]));
-  requestAnimationFrame(()=> renderItems(list));
+  try {
+    const list = await fetchJSON(API_BASE + "?sheet=items", ctrlItems.signal);
+    itemsMap = new Map(list.map(it=>[it['아이템명']||it['name'], (it['이미지URL']||it['url']||'').toString().trim()]));
+    requestAnimationFrame(()=> renderItems(list));
+  } catch (e) {
+    console.warn('items load failed', e);
+    requestAnimationFrame(()=> renderItems([])); // 빈 목록이라도 그려서 화면 전환
+    showToast('아이템 로드 실패 · 다시 시도하세요');
+  } finally {
+    hideOverlay(); // 어떤 경우든 오버레이 내림
+  }
 }
+
 let ctrlAcc = null;
 async function loadAccountsIfNeeded(){
   if (accounts) return accounts;
@@ -442,8 +460,17 @@ async function loadAccountsIfNeeded(){
 }
 
 (async function boot(){
-  try{ await loadItems(); }catch(e){ console.warn('items load failed', e); }
-  updateCounts(undefined, undefined);
+  // 5초 안전장치: 혹시 오버레이가 안 내려가면 강제로 내리기
+  const killer = setTimeout(hideOverlay, 5000);
+  try{
+    await loadItems();
+  }catch(e){
+    console.warn('boot failed', e);
+  }finally{
+    clearTimeout(killer);
+    hideOverlay();
+    updateCounts(undefined, undefined);
+  }
 })();
 </script>
 </body>
