@@ -26,22 +26,32 @@
   .chip { background:#f0fdf4; color:#065f46; border:1px solid #bbf7d0; border-radius:999px; padding:4px 8px; font-size:12px; cursor:pointer; user-select:none; }
 
   main { padding:12px 14px 90px; }
-  .grid { display:grid; gap:10px; }
+  .grid { display:grid; gap:8px; } /* 10 → 8 */
+
   @media (max-width:480px) { .grid { grid-template-columns: repeat(6, 1fr); } }
   @media (min-width:481px) and (max-width:900px) { .grid { grid-template-columns: repeat(12, 1fr); } }
   @media (min-width:901px) { .grid { grid-template-columns: repeat(14, 1fr); } }
 
-  .item { border:1px solid var(--line); border-radius:10px; background:#fff; padding:6px; display:flex; flex-direction:column; gap:6px; align-items:center; cursor:pointer; position:relative; }
-  .item img { width:100%; aspect-ratio:1/1; object-fit:cover; border-radius:8px; background:#f3f4f6; border:2px solid transparent; }
-  .item small { color:#6b7280; font-size:11px; text-align:center; }
+  .item {
+    border:1px solid var(--line); border-radius:10px; background:#fff;
+    padding:6px 4px;              /* 좌우여백 6→4 */
+    display:flex; flex-direction:column; gap:4px; /* gap 6→4 */
+    align-items:center; cursor:pointer; position:relative;
+  }
+  .item img { width:100%; aspect-ratio:1/1; object-fit:cover; border-radius:8px; background:#f3f4f6; border:1px solid transparent; } /* 2px → 1px */
+  .item small{
+    color:#6b7280; font-size:11px; text-align:center;
+    padding:0 2px;                 /* 좌우 살짝만 */
+    max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; display:block;
+  }
   .item.selected { outline:3px solid #10b981; outline-offset:2px; }
   .item .badge { position:absolute; right:6px; top:6px; background:#f3f4f6; color:#6b7280; border:1px solid #e5e7eb; border-radius:999px; font-size:11px; padding:2px 6px; display:none; }
   .item.hasCount .badge { display:inline-block; }
 
-  /* 등급별 테두리 */
-  .g4 { border-color:#de72fc !important; }
-  .g5 { border-color:#ffea4a !important; }
-  .g6 { border-color:#ffa347 !important; }
+  /* 등급별 테두리 — 50% 투명 */
+  .g4 { border-color: rgba(222,114,252,.5) !important; } /* #de72fc */
+  .g5 { border-color: rgba(255,234,74,.5) !important; }  /* #ffea4a */
+  .g6 { border-color: rgba(255,163,71,.5) !important; }  /* #ffa347 */
 
   .hint { margin:10px 0; color:#6b7280; font-size:13px; }
 
@@ -51,8 +61,9 @@
   .acc h3 .uid { font-weight:800; cursor:pointer; }
   .acc h3 .uid:hover { color:#0ea5e9; text-decoration:underline; }
   .price { font-weight:800; color:#111827; }
+
   .thumbs { display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
-  .thumbs img { width:48px; height:48px; border-radius:8px; object-fit:cover; background:#f3f4f6; border:2px solid transparent; }
+  .thumbs img { width:48px; height:48px; border-radius:8px; object-fit:cover; background:#f3f4f6; border:1px solid transparent; } /* 2px → 1px */
   .thumbs .more { font-size:12px; color:#6b7280; }
 
   .sold { opacity:.55 }
@@ -69,51 +80,32 @@
   .flash.on { opacity:1; }
 
   .toast { position:fixed; left:50%; transform:translateX(-50%); bottom:18px; background:#111827; color:#fff; padding:10px 14px; border-radius:999px; font-size:13px; opacity:0; pointer-events:none; transition:.25s; z-index:60; }
-  .toast.on { opacity:1; }
 
   .fab { position:fixed; right:12px; bottom:12px; display:flex; flex-direction:column; gap:10px; z-index:80; }
   .fab a, .fab button { padding:10px 12px; border-radius:999px; font-size:12px; font-weight:800; border:1px solid #0f172a; }
   .fab a { background:#0f172a; color:#fff; text-decoration:none; }
   .fab button { background:#fff; color:#0f172a; }
-  .fab a:hover, .fab button:hover { opacity:.9; }
-  .fab .mini { font-size:12px; padding:9px 12px; }
 
   .modal { position:fixed; inset:0; background:#0006; display:none; align-items:center; justify-content:center; padding:14px; z-index:100; }
   .modal.on { display:flex; }
   .modal .box { width:min(960px, 96vw); max-height:90vh; overflow:auto; background:#fff; border-radius:14px; border:1px solid var(--line); }
   .modal header { position:sticky; top:0; border-bottom:1px solid var(--line); background:#fff; display:flex; align-items:center; justify-content:space-between; padding:10px 12px; }
-  .modal h3 { margin:0; font-size:16px; }
-  .modal .close { background:#fff; color:#111827; border:1px solid var(--line); border-radius:10px; padding:8px 10px; cursor:pointer; }
   .help-body { padding:12px 14px 16px; }
-  .help-body h2 { margin:0; font-size:18px; }
   .help-list { list-style: decimal; padding-left: 18px; margin:10px 18px 16px; color:#1f2937; line-height:1.6; }
-  .help-list > li { margin:8px 0; position: relative; left: -6px; }
-  .help-list ul { list-style: none; margin:6px 0 8px 18px; padding:0; }
-  .help-list ul li { margin:6px 0; display:flex; align-items:flex-start; }
-  .help-list ul li .bullet { display:inline-block; width:auto; color:#6b7280; margin-right:2px; }
-  .help-body em { font-style:normal; color:#111827; font-weight:700; }
-
-  .overlay { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; gap:12px; background:#ffffff; z-index:110; }
-  .spinner { width:26px; height:26px; border-radius:50%; border:3px solid #e5e7eb; border-top-color:#0ea5e9; animation:spin 0.9s linear infinite; }
-  .overlay .txt { color:#0f172a; font-weight:800; }
-  @keyframes spin { to { transform:rotate(360deg); } }
 
   .acc-modal .box { width:min(720px, 96vw); }
   .acc-detail { padding:12px 14px 16px; }
   .acc-detail .row { display:flex; align-items:center; gap:8px; margin:8px 0; flex-wrap:wrap; }
-  /* 기본: 태블릿·PC → 기존 비율에 맞춘 가변 그리드 */
+
   .acc-detail .thumbs {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
     gap: 10px 8px;
     justify-content: start;
   }
-  /* 모바일(480px 이하) → 6개 고정 */
-  @media (max-width: 480px) {
-    .acc-detail .thumbs { grid-template-columns: repeat(6, 1fr); }
-  }
+  @media (max-width: 480px) { .acc-detail .thumbs { grid-template-columns: repeat(6, 1fr); } }
   .acc-detail .thumbs > * { justify-self: start; }
-  .acc-detail .thumbs img { width:48px; height:48px; border-radius:8px; object-fit:cover; background:#f3f4f6; border:2px solid transparent; }
+  .acc-detail .thumbs img { width:48px; height:48px; border-radius:8px; object-fit:cover; background:#f3f4f6; border:1px solid transparent; } /* 2px → 1px */
   .acc-detail .label { display:inline-block; min-width:110px; font-size:13px; color:#6b7280; }
 </style>
 </head>
@@ -165,24 +157,17 @@
     <div class="help-body">
       <h2>구매 가이드</h2>
       <ol class="help-list">
-        <li><strong>캐릭터 선택</strong>: 상단 카드에서 원하는 캐릭터를 눌러 선택하세요. 여러 개 선택하면 <em>해당 캐릭터를 모두 포함</em>하는 계정만 검색됩니다.</li>
+        <li><strong>캐릭터 선택</strong>: 상단 카드에서 원하는 캐릭터를 눌러 선택하세요. 같은 카드를 여러 번 누르면 <em>최대 7회까지</em> 중첩 선택됩니다.</li>
         <li><strong>UID/판매상태/정렬</strong>:
           <ul>
-            <li><span class="bullet">•</span>UID: 판매자가 관리용으로 붙인 고유 번호입니다. 일부 숫자만 입력해도 포함 검색됩니다.</li>
-            <li><span class="bullet">•</span>판매완료 숨기기: 이미 판매된 계정을 리스트에서 숨깁니다.</li>
-            <li><span class="bullet">•</span>정렬: 가격 또는 포함 캐릭터 수 기준으로 오름/내림차순 정렬합니다.</li>
+            <li><span class="bullet">•</span>UID: 일부 숫자만 입력해도 포함 검색됩니다.</li>
+            <li><span class="bullet">•</span>판매완료 숨기기: 이미 판매된 계정을 숨깁니다.</li>
+            <li><span class="bullet">•</span>정렬: 가격 또는 포함 캐릭터 수 기준 오름/내림차순.</li>
           </ul>
         </li>
         <li><strong>검색 & 확인</strong>:
           <ul>
             <li><span class="bullet">•</span>검색 결과 카드에서 포함 캐릭터와 <strong>가격</strong>, 부가설명을 확인하세요.</li>
-            <li><span class="bullet">•</span>원하는 계정의 uid를 복사한 뒤 판매자의 오픈카카오톡으로 문의하세요.</li>
-          </ul>
-        </li>
-        <li><strong>주의 사항</strong>:
-          <ul>
-            <li><span class="bullet">•</span>상세한 캐릭터 목록 및 아이템 현황은 실시간으로 변경될 수 있습니다.</li>
-            <li><span class="bullet">•</span>구매후 24시간 이전에 발생한 문제에 대해서는 보상을 해 드리며, 24시간 이후에 발생한 문제에 대해서는 책임지지 않습니다.</li>
           </ul>
         </li>
       </ol>
@@ -206,7 +191,7 @@
 </div>
 
 <script>
-const API_BASE = 'https://script.google.com/macros/s/AKfycbzRWABQnJjuCTX_-mdmYykAQAyb6nos66vOc_zsiLqrsIZ-amcHnl4L2l8Fp9fLxmkV/exec';
+const API_BASE = 'https://script.google.com/macros/s/AKfycbziMLW8TUgzTFnrYJFpW9u3AQmnWPeyDofFbrnKrn6ECjMNMWCpRrhkNG-OJGojM6TJ/exec';
 const KAKAO = "https://open.kakao.com/o/sENDKZBh";
 const PLACEHOLDER = "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><rect width='100%' height='100%' fill='%23eef'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' font-size='12' fill='%23999'>no image</text></svg>";
 
@@ -218,20 +203,14 @@ let itemsMap = new Map(); // name -> { url, grade(4|5|6) }
 let accounts = null;
 let selected = new Map(); // name -> count (1..7)
 
-/* === 캐시/토큰 === */
 const accMeta = new WeakMap(); // acc -> { items:string[], count:number }
 let renderToken = 0;
 
-/* === 등급 보조 === */
 const G_ORDER = {6:3, 5:2, 4:1, 0:0};
 function toGrade(v){ const n = Number(v); return (n===4||n===5||n===6) ? n : 0; }
 function gradeClass(g){ return g===6?'g6' : g===5?'g5' : g===4?'g4' : ''; }
 
-/* === 오버레이 안전히 닫기 === */
-function hideOverlay(){
-  const ov = document.getElementById('overlay');
-  if (ov) { ov.style.display='none'; ov.setAttribute('aria-hidden','true'); }
-}
+function hideOverlay(){ const ov = document.getElementById('overlay'); if (ov) { ov.style.display='none'; ov.setAttribute('aria-hidden','true'); } }
 
 function getAccItems(acc){
   const c = accMeta.get(acc);
@@ -239,10 +218,7 @@ function getAccItems(acc){
   const arr=[]; for(const k in acc){ if(/^포함아이템\d+$/.test(k)){ const v=(acc[k]||'').toString().trim(); if(v) arr.push(v); } }
   accMeta.set(acc,{items:arr,count:arr.length}); return arr;
 }
-function getAccCount(acc){
-  const c = accMeta.get(acc);
-  return c ? c.count : getAccItems(acc).length;
-}
+function getAccCount(acc){ const c = accMeta.get(acc); return c ? c.count : getAccItems(acc).length; }
 
 function updateCounts(total, matched){ document.getElementById('counts').textContent = `총 매물 ${total ?? '–'} | 결과 ${matched ?? '–'}`; }
 function itemCount(name){ return selected.get(name) || 0; }
@@ -276,7 +252,6 @@ function renderItemBadges(){
 }
 
 async function renderItems(list){
-  // 정렬: 6성,5성,4성 순
   list.sort((a,b)=>{
     const ga = toGrade(a['등급']||a['grade']);
     const gb = toGrade(b['등급']||b['grade']);
@@ -334,15 +309,10 @@ function sortResults(list){
   return ext.map(x=>x.a);
 }
 
-function gradeOfName(name){
-  const meta = itemsMap.get(name);
-  return meta ? meta.grade : 0;
-}
+function gradeOfName(name){ const meta = itemsMap.get(name); return meta ? meta.grade : 0; }
 
 function renderAccountsChunked(list){
-  const box = document.getElementById('accounts');
-  box.innerHTML = '';
-
+  const box = document.getElementById('accounts'); box.innerHTML = '';
   if (!list.length) {
     box.innerHTML = '<p class="chip" style="background:#fff;border-color:#e5e7eb;color:#6b7280;">조건에 맞는 계정이 없습니다.</p>';
     updateCounts(accounts?.length || 0, 0);
@@ -361,17 +331,13 @@ function renderAccountsChunked(list){
 
     for (; i < end; i++) {
       const acc = list[i];
-      // 썸네일 표시 순서: 6 → 5 → 4
       const names = getAccItems(acc).slice().sort((a,b)=>G_ORDER[gradeOfName(b)]-G_ORDER[gradeOfName(a)]);
 
       const thumbs = names.slice(0, 11).map(n => {
         const meta = itemsMap.get(n) || {url:'',grade:0};
         const url  = (meta.url || '').toString().trim() || PLACEHOLDER;
         const cls  = gradeClass(meta.grade);
-        return `<img class="${cls}" loading="lazy" decoding="async" fetchpriority="low"
-                     referrerpolicy="no-referrer"
-                     src="${url}" alt="${n}" title="${n}"
-                     onerror="this.src='${PLACEHOLDER}'">`;
+        return `<img class="${cls}" loading="lazy" decoding="async" fetchpriority="low" referrerpolicy="no-referrer" src="${url}" alt="${n}" title="${n}" onerror="this.src='${PLACEHOLDER}'>`;
       }).join('');
 
       const more = names.length > 11 ? `<span class="more">+${names.length - 11}</span>` : '';
@@ -382,10 +348,7 @@ function renderAccountsChunked(list){
       const desc  = acc['부가설명'] || '';
 
       const card = h(`<div class="acc ${sold ? 'sold' : ''}" role="button">
-        <h3>
-          <span class="uid" title="탭하면 복사">${uid}</span>
-          <span class="price">${price}원</span>
-        </h3>
+        <h3><span class="uid" title="탭하면 복사">${uid}</span><span class="price">${price}원</span></h3>
         <div style="display:flex; gap:8px; align-items:center; margin-bottom:8px;">
           <span class="pill">${sold ? '판매완료' : '판매중'}</span>
           <span class="mut">${desc}</span>
@@ -401,16 +364,12 @@ function renderAccountsChunked(list){
       });
 
       card.addEventListener('click', ()=> openAccModal(acc, names));
-
       frag.appendChild(card);
     }
 
     box.appendChild(frag);
     updateCounts(accounts.length, list.length);
-
-    if (i < list.length) {
-      (window.requestIdleCallback || window.requestAnimationFrame || setTimeout)(draw, 0);
-    }
+    if (i < list.length) (window.requestIdleCallback || window.requestAnimationFrame || setTimeout)(draw, 0);
   }
 
   (window.requestIdleCallback || window.requestAnimationFrame || setTimeout)(draw, 0);
@@ -420,7 +379,7 @@ async function runSearch(){
   document.getElementById('loading').style.display = 'inline-flex';
   document.getElementById('hint-acc').style.display = 'none';
   try {
-    await loadAccountsIfNeeded(); // 최초 1회만 네트워크
+    await loadAccountsIfNeeded();
     const filtered = sortResults(applyFilters(accounts));
     renderAccountsChunked(filtered);
   } catch (e) { console.warn(e); }
@@ -432,8 +391,6 @@ function flashDone(){ let f = document.getElementById('flash'); f.classList.add(
 
 document.getElementById('btn-search').addEventListener('click', runSearch);
 document.getElementById('btn-clear').addEventListener('click', ()=>{ selected.clear(); updateChips(); renderItems(Array.from(itemsMap, ([아이템명, meta])=>({아이템명, 이미지URL: meta.url, 등급: meta.grade}))); });
-
-// 구매문의 버튼 링크 주입
 document.getElementById('btn-buy').setAttribute('href', KAKAO);
 
 document.getElementById('btn-help').addEventListener('click', ()=>{ const m = document.getElementById('help-modal'); m.classList.add('on'); m.setAttribute('aria-hidden','false'); });
@@ -448,7 +405,6 @@ function openAccModal(acc, names){
   const desc = acc['부가설명']||'';
   const price = Number(acc['가격']||0).toLocaleString('ko-KR');
 
-  // 정렬: 6 → 5 → 4
   const sorted = names.slice().sort((a,b)=>G_ORDER[gradeOfName(b)]-G_ORDER[gradeOfName(a)]);
 
   const thumbs = sorted.map(n=>{ 
@@ -456,7 +412,7 @@ function openAccModal(acc, names){
     const url  = (meta.url || '').toString().trim() || PLACEHOLDER;
     const cls  = gradeClass(meta.grade);
     return `<div style="display:flex;flex-direction:column;align-items:center;gap:4px">
-      <img class="${cls}" loading="lazy" decoding="async" referrerpolicy="no-referrer" src="${url}" alt="${n}" title="${n}" onerror="this.src='${PLACEHOLDER}'" width="48" height="48" style="border-radius:8px;object-fit:cover;background:#f3f4f6;border-width:2px;border-style:solid">
+      <img class="${cls}" loading="lazy" decoding="async" referrerpolicy="no-referrer" src="${url}" alt="${n}" title="${n}" onerror="this.src='${PLACEHOLDER}'" width="48" height="48" style="border-radius:8px;object-fit:cover;background:#f3f4f6;border-width:1px;border-style:solid">
       <small style="color:#6b7280;font-size:11px;text-align:center;max-width:64px;word-break:keep-all">${n}</small>
     </div>`; }).join('');
 
@@ -474,10 +430,7 @@ async function fetchJSON(url, signal){
   const r = await fetch(url, { signal, cache: 'no-store' });
   const txt = await r.text();
   try { return JSON.parse(txt); }
-  catch(e){
-    console.warn('JSON parse error:', txt.slice(0, 200));
-    throw new Error('JSON parse error');
-  }
+  catch(e){ console.warn('JSON parse error:', txt.slice(0, 200)); throw new Error('JSON parse error'); }
 }
 
 let ctrlItems = null;
@@ -486,7 +439,6 @@ async function loadItems(){
   ctrlItems = new AbortController();
   try {
     const list = await fetchJSON(API_BASE + "?sheet=items", ctrlItems.signal);
-    // map: name -> { url, grade }
     itemsMap = new Map(list.map(it=>{
       const name = it['아이템명']||it['name'];
       const url  = (it['이미지URL']||it['url']||'').toString().trim();
