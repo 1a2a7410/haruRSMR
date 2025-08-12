@@ -3,12 +3,15 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>리세샵</title>
+<title>테스트 계정 검색</title>
+
+<!-- 네트워크 힌트 -->
 <link rel="preconnect" href="https://script.google.com" crossorigin>
 <link rel="preconnect" href="https://drive.google.com" crossorigin>
 <link rel="dns-prefetch" href="//drive.google.com">
 <link rel="preconnect" href="https://lh3.googleusercontent.com" crossorigin>
 <link rel="dns-prefetch" href="//lh3.googleusercontent.com">
+
 <style>
   :root { --bg:#fafafa; --fg:#0f172a; --mut:#6b7280; --line:#e5e7eb; --pri:#111827; --back:#ffffffd9; --okbg:#d4edda; --okfg:#155724; --okbd:#c3e6cb; }
   * { box-sizing: border-box; }
@@ -31,54 +34,54 @@
   @media (min-width:481px) and (max-width:900px) { .grid { grid-template-columns: repeat(12, 1fr); } }
   @media (min-width:901px) { .grid { grid-template-columns: repeat(14, 1fr); } }
 
-  .item { border:1px solid var(--line); border-radius:10px; background:#fff; padding:4px; display:flex; flex-direction:column; gap:6px; align-items:center; cursor:pointer; position:relative; } /* ← padding 6px → 4px */
-/* 모든 아이템 이미지(메인, 상세, 썸네일)에 세로 20% 길게 적용 */
-.item img {
-  display: block;
-  width: 100%;
-  aspect-ratio: 10 / 11; /* 가로:세로 = 10:11 → 세로가 약 10% 길어짐 */
-  height: auto;
-  object-fit: cover;
-  border-radius: 8px;
-  background: #f3f4f6;
-  border: 2px solid transparent; /* 등급 테두리용 */
-}
-/* 카드 캡션 좌우 여백 축소 → 한 줄을 조금 더 길게 보이게 */
-  .item small { padding: 0 2px; }
-  .item small { color:#6b7280; font-size:11px; text-align:center; }
-  .item.selected { 
-    outline:2.5px solid #10b981; 
-    outline-offset:-1px; 
-}
-  .item .badge{
-  position: absolute;
-  right: 2px;         /* 기존 6 → 2 */
-  top: 2px;           /* 기존 6 → 2 */
-  background: #f3f4f6;
-  color: #6b7280;
-  border: 1px solid #e5e7eb;
-  border-radius: 999px;
-  font-size: 11px;    /* 숫자 크기 유지 */
-  padding: 1px 5px;   /* 캡슐만 살짝 축소 */
-  line-height: 1;
-  display: none;      /* 기본은 감춤 */
-}
-.item.hasCount .badge{ display: inline-block; } /* +n 있을 때만 보이기 */
+  /* 아이템 카드 */
+  .item {
+    border:1px solid var(--line); border-radius:10px; background:#fff; padding:4px;
+    display:flex; flex-direction:column; gap:6px; align-items:center; cursor:pointer; position:relative;
 
-  /* 등급별 테두리 (불투명) */
+    /* 페인트/레이아웃 최적화 (오프스크린 지연 렌더링) */
+    content-visibility:auto;
+    contain-intrinsic-size: 180px 220px; /* 예상 크기 힌트(대략) */
+  }
+  .item img{
+    display:block; width:100%;
+    aspect-ratio:10/11;               /* 가로보다 세로 10% 길게 */
+    height:auto; object-fit:cover;
+    border-radius:8px; background:#f3f4f6;
+    border:2px solid transparent;     /* 등급 테두리용 */
+  }
+  .item small{ padding:0 2px; color:#6b7280; font-size:11px; text-align:center; }
+  .item.selected{ outline:2.5px solid #10b981; outline-offset:-1px; }
+
+  /* +n 배지 (우상단, 약간 작게) */
+  .item .badge{
+    position:absolute; right:2px; top:2px;
+    background:#f3f4f6; color:#6b7280; border:1px solid #e5e7eb;
+    border-radius:999px; font-size:11px; padding:1px 5px; line-height:1; display:none;
+  }
+  .item.hasCount .badge{ display:inline-block; }
+
+  /* 등급별 테두리 (이미지 자체) */
   .g4 { border-color:#de72fc !important; border-width:1.5px !important; border-style:solid !important; }
   .g5 { border-color:#ffea4a !important; border-width:1.5px !important; border-style:solid !important; }
   .g6 { border-color:#ffa347 !important; border-width:1.5px !important; border-style:solid !important; }
 
   .hint { margin:10px 0; color:#6b7280; font-size:13px; }
 
+  /* 계정 카드 + 페인트 최적화 */
   .accounts { display:grid; gap:12px; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); margin-top:12px; }
-  .acc { border:1px solid var(--line); background:#fff; border-radius:12px; padding:12px; cursor:pointer; contain:content; }
+  .acc {
+    border:1px solid var(--line); background:#fff; border-radius:12px; padding:12px; cursor:pointer; contain:content;
+    content-visibility:auto;
+    contain-intrinsic-size: 260px 180px;
+  }
   .acc h3 { margin:0 0 8px; font-size:16px; display:flex; justify-content:space-between; gap:8px; align-items:center; }
   .acc h3 .uid { font-weight:800; cursor:pointer; }
   .acc h3 .uid:hover { color:#0ea5e9; text-decoration:underline; }
   .price { font-weight:800; color:#111827; }
   .thumbs { display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
+  /* 썸네일 고정 크기(리스트용) – 큰 이미지가 들어와도 항상 48x48로 */
+  .thumbs img { width:48px; height:48px; border-radius:8px; object-fit:cover; background:#f3f4f6; }
   .thumbs .more { font-size:12px; color:#6b7280; }
 
   .sold { opacity:.55 }
@@ -128,39 +131,29 @@
   .acc-detail { padding:12px 14px 16px; }
   .acc-detail .row { display:flex; align-items:center; gap:8px; margin:8px 0; flex-wrap:wrap; }
 
-
-/* 상세 썸네일: 모바일 6칸 고정 + 이미지 높이 동일(정사각) */
-.acc-detail .thumbs{
-  display:grid;
-  grid-template-columns:repeat(6, 1fr); /* 모바일: 정확히 6칸 */
-  gap:6px 4px;                          /* 좌우 여백 살짝 축소 */
-  justify-content:start;
-}
-@media (min-width:481px){
-  .acc-detail .thumbs{ grid-template-columns:repeat(auto-fill, minmax(64px, 1fr)); }
-}
-.acc-detail .thumbs > *{
-  display:flex; flex-direction:column; align-items:center; gap:4px; width:100%;
-}
-
-.acc-detail .thumbs small{
-  display:-webkit-box;
-  -webkit-line-clamp:2; -webkit-box-orient:vertical;
-  overflow:hidden;
-  width:100%; text-align:center; line-height:14px;
-  height:28px;                          /* ← 고정 높이(2줄) */
-  color:#6b7280; font-size:11px; word-break:keep-all;
-}
-.thumbs img,
-.acc-detail .thumbs img {
-  width: 48px;
-  height: 48px;
-  border-radius: 8px;
-  object-fit: cover;
-  background: #f3f4f6;
-  border: 1.5px solid transparent;
-}
-
+  /* 상세보기 썸네일 그리드(고정 6칸) + 텍스트 2줄 고정 */
+  .acc-detail .thumbs{
+    display:grid;
+    grid-template-columns:repeat(6, 1fr);
+    gap:6px 4px;
+    justify-content:start;
+  }
+  @media (min-width:481px){
+    .acc-detail .thumbs{ grid-template-columns:repeat(auto-fill, minmax(64px, 1fr)); }
+  }
+  .acc-detail .thumbs > *{
+    display:flex; flex-direction:column; align-items:center; gap:4px; width:100%;
+  }
+  .acc-detail .thumbs img{
+    display:block; width:100%;
+    aspect-ratio:10/11; height:auto; object-fit:cover;
+    border-radius:8px; background:#f3f4f6; border:1.5px solid transparent;
+  }
+  .acc-detail .thumbs small{
+    display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
+    width:100%; text-align:center; line-height:14px; height:28px;
+    color:#6b7280; font-size:11px; word-break:keep-all;
+  }
 </style>
 </head>
 <body>
@@ -236,6 +229,8 @@
     </div>
   </div>
 </div>
+
+<!-- Account Modal -->
 <div id="acc-modal" class="modal acc-modal" aria-hidden="true">
   <div class="box">
     <header>
@@ -260,41 +255,37 @@ const $ = (q)=>document.querySelector(q);
 function h(html){ const d=document.createElement('div'); d.innerHTML=html.trim(); return d.firstChild; }
 function cleanUrl(u){ if(!u) return u; if(/\.jrg$/i.test(u)) u=u.replace(/\.jrg$/i,'.jpg'); return u; }
 
+/* 원본 코드 변수들 */
 let itemsMap = new Map(); // name -> { url, grade(4|5|6) }
 let accounts = null;
 let selected = new Map(); // name -> count (1..7)
 
-/* === 캐시/토큰 === */
+/* 캐시/토큰 */
 const accMeta = new WeakMap(); // acc -> { items:string[], count:number }
 let renderToken = 0;
 
-/* === 등급 보조 === */
+/* 등급 보조 */
 const G_ORDER = {6:3, 5:2, 4:1, 0:0};
 function toGrade(v){ const n = Number(v); return (n===4||n===5||n===6) ? n : 0; }
 function gradeClass(g){ return g===6?'g6' : g===5?'g5' : g===4?'g4' : ''; }
 
-/* === 오버레이 안전히 닫기 === */
-function hideOverlay(){
-  const ov = document.getElementById('overlay');
-  if (ov) { ov.style.display='none'; ov.setAttribute('aria-hidden','true'); }
-}
+/* 오버레이 안전히 닫기 */
+function hideOverlay(){ const ov = document.getElementById('overlay'); if (ov) { ov.style.display='none'; ov.setAttribute('aria-hidden','true'); } }
 
+/* 계정 아이템 추출 */
 function getAccItems(acc){
   const c = accMeta.get(acc);
   if (c) return c.items;
   const arr=[]; for(const k in acc){ if(/^포함아이템\d+$/.test(k)){ const v=(acc[k]||'').toString().trim(); if(v) arr.push(v); } }
   accMeta.set(acc,{items:arr,count:arr.length}); return arr;
 }
-function getAccCount(acc){
-  const c = accMeta.get(acc);
-  return c ? c.count : getAccItems(acc).length;
-}
+function getAccCount(acc){ const c = accMeta.get(acc); return c ? c.count : getAccItems(acc).length; }
 
+/* 카운트/칩 */
 function updateCounts(total, matched){ document.getElementById('counts').textContent = `총 매물 ${total ?? '–'} | 결과 ${matched ?? '–'}`; }
 function itemCount(name){ return selected.get(name) || 0; }
 function setItemCount(name, next){ if(next<=0) selected.delete(name); else selected.set(name, Math.min(7,next)); }
 function chipLabel(name, cnt){ return cnt>=2 ? `${name} +${cnt-1}` : name; }
-
 function updateChips(){
   const box = document.getElementById('chips'); box.innerHTML='';
   if(!selected.size) return;
@@ -311,6 +302,7 @@ function updateChips(){
   }
 }
 
+/* 선택 배지/하이라이트 */
 function renderItemBadges(){
   document.querySelectorAll('.item').forEach(card=>{
     const name = card.getAttribute('data-name');
@@ -321,8 +313,12 @@ function renderItemBadges(){
   });
 }
 
+/* 이미지 URL 그대로 사용 (필요시 파라미터 최적화 훅) */
+function gridSrc(url){ return url; }
+
+/* 아이템 렌더 (초기 24장 eager) */
 async function renderItems(list){
-  // 정렬: 6성,5성,4성 순
+  // 등급 정렬: 6 → 5 → 4
   list.sort((a,b)=>{
     const ga = toGrade(a['등급']||a['grade']);
     const gb = toGrade(b['등급']||b['grade']);
@@ -331,16 +327,27 @@ async function renderItems(list){
 
   const box = document.getElementById('items'); box.innerHTML='';
   const frag = document.createDocumentFragment();
+
+  let index = 0; // eager/lazy 전환용
+
   for(const it of list){
     const name = it['아이템명'] || it['name'] || '';
     const img  = cleanUrl((it['이미지URL'] || it['url'] || '').toString().trim());
     const g    = toGrade(it['등급']||it['grade']);
     const cls  = gradeClass(g);
+
+    const eager = index < 24; index++;
+
     const card = h(`<div class="item" data-name="${name}">
       <span class="badge"></span>
-      <img class="${cls}" loading="lazy" decoding="async" fetchpriority="low" referrerpolicy="no-referrer" src="${img || PLACEHOLDER}" alt="${name}" onerror="this.src='${PLACEHOLDER}'">
+      <img class="${cls}"
+           ${eager ? 'loading="eager" fetchpriority="high"' : 'loading="lazy" fetchpriority="low"'}
+           decoding="async" referrerpolicy="no-referrer"
+           src="${gridSrc(img) || PLACEHOLDER}" alt="${name}"
+           onerror="this.src='${PLACEHOLDER}'">
       <small>${name}</small>
     </div>`);
+
     card.addEventListener('click', ()=>{
       const cur = itemCount(name);
       const next = (cur>=7) ? 0 : cur+1;
@@ -348,12 +355,14 @@ async function renderItems(list){
       updateChips();
       renderItemBadges();
     });
+
     frag.appendChild(card);
   }
   box.appendChild(frag);
   renderItemBadges();
 }
 
+/* 필터/정렬 */
 function applyFilters(list){
   const q = document.getElementById('uid-q').value.trim();
   const hide = document.getElementById('hide-sold').checked;
@@ -369,7 +378,6 @@ function applyFilters(list){
     return true;
   });
 }
-
 function sortResults(list){
   const v = document.getElementById('sort').value;
   const ext = list.map(a=>({ a, price:Number(a['가격']||0), cnt:getAccCount(a) }));
@@ -379,12 +387,9 @@ function sortResults(list){
   if(v==='count_asc')  ext.sort((x,y)=>x.cnt-y.cnt);
   return ext.map(x=>x.a);
 }
+function gradeOfName(name){ const meta = itemsMap.get(name); return meta ? meta.grade : 0; }
 
-function gradeOfName(name){
-  const meta = itemsMap.get(name);
-  return meta ? meta.grade : 0;
-}
-
+/* 계정 리스트(청크 렌더) */
 function renderAccountsChunked(list){
   const box = document.getElementById('accounts');
   box.innerHTML = '';
@@ -407,7 +412,6 @@ function renderAccountsChunked(list){
 
     for (; i < end; i++) {
       const acc = list[i];
-      // 썸네일 표시 순서: 6 → 5 → 4
       const names = getAccItems(acc).slice().sort((a,b)=>G_ORDER[gradeOfName(b)]-G_ORDER[gradeOfName(a)]);
 
       const thumbs = names.slice(0, 11).map(n => {
@@ -454,39 +458,41 @@ function renderAccountsChunked(list){
     box.appendChild(frag);
     updateCounts(accounts.length, list.length);
 
-    if (i < list.length) {
-      (window.requestIdleCallback || window.requestAnimationFrame || setTimeout)(draw, 0);
-    }
+    if (i < list.length) { (window.requestIdleCallback || window.requestAnimationFrame || setTimeout)(draw, 0); }
   }
 
   (window.requestIdleCallback || window.requestAnimationFrame || setTimeout)(draw, 0);
 }
 
+/* 검색 */
 async function runSearch(){
   document.getElementById('loading').style.display = 'inline-flex';
   document.getElementById('hint-acc').style.display = 'none';
   try {
-    await loadAccountsIfNeeded(); // 최초 1회만 네트워크
+    await loadAccountsIfNeeded();
     const filtered = sortResults(applyFilters(accounts));
     renderAccountsChunked(filtered);
   } catch (e) { console.warn(e); }
   finally { document.getElementById('loading').style.display = 'none'; flashDone(); }
 }
 
+/* 토스트/플래시 */
 function showToast(msg='복사됨'){ const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('on'); setTimeout(()=> t.classList.remove('on'), 1100); }
 function flashDone(){ let f = document.getElementById('flash'); f.classList.add('on'); clearTimeout(f._t); f._t=setTimeout(()=> f.classList.remove('on'), 650); }
 
+/* 이벤트 */
 document.getElementById('btn-search').addEventListener('click', runSearch);
-document.getElementById('btn-clear').addEventListener('click', ()=>{ selected.clear(); updateChips(); renderItems(Array.from(itemsMap, ([아이템명, meta])=>({아이템명, 이미지URL: meta.url, 등급: meta.grade}))); });
-
-// 구매문의 버튼 링크 주입
+document.getElementById('btn-clear').addEventListener('click', ()=>{
+  selected.clear(); updateChips();
+  renderItems(Array.from(itemsMap, ([아이템명, meta])=>({아이템명, 이미지URL: meta.url, 등급: meta.grade})));
+});
 document.getElementById('btn-buy').setAttribute('href', KAKAO);
-
 document.getElementById('btn-help').addEventListener('click', ()=>{ const m = document.getElementById('help-modal'); m.classList.add('on'); m.setAttribute('aria-hidden','false'); });
 document.getElementById('help-close').addEventListener('click', ()=>{ const m = document.getElementById('help-modal'); m.classList.remove('on'); m.setAttribute('aria-hidden','true'); });
 document.getElementById('acc-close').addEventListener('click', ()=>{ const m = document.getElementById('acc-modal'); m.classList.remove('on'); m.setAttribute('aria-hidden','true'); });
 document.getElementById('acc-modal').addEventListener('click', (e)=>{ if(e.target.id==='acc-modal'){ const m=e.currentTarget; m.classList.remove('on'); m.setAttribute('aria-hidden','true'); } });
 
+/* 상세 모달 */
 function openAccModal(acc, names){
   const modal = document.getElementById('acc-modal');
   const box = document.getElementById('acc-detail');
@@ -494,10 +500,9 @@ function openAccModal(acc, names){
   const desc = acc['부가설명']||'';
   const price = Number(acc['가격']||0).toLocaleString('ko-KR');
 
-  // 정렬: 6 → 5 → 4
   const sorted = names.slice().sort((a,b)=>G_ORDER[gradeOfName(b)]-G_ORDER[gradeOfName(a)]);
 
-  const thumbs = sorted.map(n=>{ 
+  const thumbs = sorted.map(n=>{
     const meta = itemsMap.get(n) || {url:'',grade:0};
     const url  = (meta.url || '').toString().trim() || PLACEHOLDER;
     const cls  = gradeClass(meta.grade);
@@ -517,23 +522,21 @@ function openAccModal(acc, names){
   modal.classList.add('on'); modal.setAttribute('aria-hidden','false');
 }
 
+/* 네트워크 */
 async function fetchJSON(url, signal){
   const r = await fetch(url, { signal, cache: 'no-store' });
   const txt = await r.text();
   try { return JSON.parse(txt); }
-  catch(e){
-    console.warn('JSON parse error:', txt.slice(0, 200));
-    throw new Error('JSON parse error');
-  }
+  catch(e){ console.warn('JSON parse error:', txt.slice(0, 200)); throw new Error('JSON parse error'); }
 }
 
+/* 부트 */
 let ctrlItems = null;
 async function loadItems(){
   ctrlItems && ctrlItems.abort();
   ctrlItems = new AbortController();
   try {
     const list = await fetchJSON(API_BASE + "?sheet=items", ctrlItems.signal);
-    // map: name -> { url, grade }
     itemsMap = new Map(list.map(it=>{
       const name = it['아이템명']||it['name'];
       const url  = (it['이미지URL']||it['url']||'').toString().trim();
