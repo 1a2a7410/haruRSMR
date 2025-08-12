@@ -114,17 +114,6 @@
   .acc-detail { padding:12px 14px 16px; }
   .acc-detail .row { display:flex; align-items:center; gap:8px; margin:8px 0; flex-wrap:wrap; }
 
-/* 캡션 영역을 균일 높이로 고정(2줄까지 표시), 넘치면 말줄임 */
-.acc-detail .thumbs small{
-  display:-webkit-box;
-  -webkit-line-clamp:2;
-  -webkit-box-orient:vertical;
-  overflow:hidden;
-  text-align:center;
-  max-width:64px;
-  line-height:1.2;
-  margin-top:4px;
-}
 
 /* 상세 썸네일: 모바일 6칸 고정 + 이미지 높이 동일(정사각) */
 .acc-detail .thumbs{
@@ -153,37 +142,7 @@
   height:28px;                          /* ← 고정 높이(2줄) */
   color:#6b7280; font-size:11px; word-break:keep-all;
 }
-.acc-detail .thumbs > * { justify-self: start; }
-.acc-detail .label { display:inline-block; min-width:110px; font-size:13px; color:#6b7280; }
-  .acc-detail .thumbs > * {
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    gap:4px;
-    width:100%;
-  }
-  .acc-detail .thumbs img {
-    width:100%;
-    aspect-ratio:1/1;   /* 정사각형 유지 */
-    height:auto;
-    border-radius:8px;
-    object-fit:cover;
-    background:#f3f4f6;
-    border:1.5px solid transparent; /* 1.5px */
-  }
-  .acc-detail .thumbs small {
-    display:block;
-    width:100%;
-    color:#6b7280;
-    font-size:11px;
-    text-align:center;
-    line-height:14px;
-    max-height:28px;     /* 2줄 */
-    overflow:hidden;
-    word-break:keep-all;
-  }
 
-  .acc-detail .label { display:inline-block; min-width:110px; font-size:13px; color:#6b7280; }
 </style>
 </head>
 <body>
