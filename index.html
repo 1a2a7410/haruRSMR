@@ -414,6 +414,13 @@ function renderAccountsChunked(list){
       const acc = list[i];
       const names = getAccItems(acc).slice().sort((a,b)=>G_ORDER[gradeOfName(b)]-G_ORDER[gradeOfName(a)]);
 
+let c4 = 0, c5 = 0;
+for (const n of names) {
+  const g = gradeOfName(n);
+  if (g === 5) c5++;
+  else if (g === 4) c4++;
+}
+
       const thumbs = names.slice(0, 11).map(n => {
         const meta = itemsMap.get(n) || {url:'',grade:0};
         const url  = (meta.url || '').toString().trim() || PLACEHOLDER;
@@ -437,10 +444,10 @@ function renderAccountsChunked(list){
           <span class="price">${price}원</span>
         </h3>
         <div style="display:flex; gap:8px; align-items:center; margin-bottom:8px;">
-          <span class="pill">${sold ? '판매완료' : '판매중'}</span>
-          <span class="mut">${desc}</span>
-          <span class="mut">· 아이템 ${names.length}개</span>
-        </div>
+  <span class="pill">${sold ? '판매완료' : '판매중'}</span>
+  <span class="mut">${desc}</span>
+  <span class="mut">· 5성 ${c5}개 · 4성 ${c4}개</span>
+</div>
         <div class="thumbs">${thumbs}${more}</div>
       </div>`);
 
