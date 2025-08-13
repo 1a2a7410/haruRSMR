@@ -380,17 +380,21 @@ function applyFilters(list){
 }
 function sortResults(list){
   const v = document.getElementById('sort').value;
-  const ext = list.map(a=>({ a, price:Number(a['가격']||0), cnt:getAccCount(a) }));
-  const names = getAccItems(a);
+
+  // 각 계정에 대해 가격/총개수/5성개수 계산
+  const ext = list.map(a=>{
+    const names = getAccItems(a);
     const fiveCount = names.filter(n => gradeOfName(n) === 5).length;
-    const price = Number(a['가격']||0);
+    const price = Number(a['가격'] || 0);
+    const cnt = getAccCount(a);
     return { a, price, cnt, fiveCount };
   });
-  
-  if(v==='price_desc') ext.sort((x,y)=>y.price-x.price);
-  if(v==='price_asc')  ext.sort((x,y)=>x.price-y.price);
-  if(v==='count_desc') ext.sort((x,y)=>y.fiveCount-x.fiveCount); // 5성 많은 순
-  if(v==='count_asc')  ext.sort((x,y)=>x.fiveCount-y.fiveCount); // 5성 적은 순
+
+  if (v === 'price_desc') ext.sort((x,y)=> y.price - x.price);
+  if (v === 'price_asc')  ext.sort((x,y)=> x.price - y.price);
+  if (v === 'count_desc') ext.sort((x,y)=> y.fiveCount - x.fiveCount); // 5성 많은 순
+  if (v === 'count_asc')  ext.sort((x,y)=> x.fiveCount - y.fiveCount); // 5성 적은 순
+
   return ext.map(x=>x.a);
 }
 function gradeOfName(name){ const meta = itemsMap.get(name); return meta ? meta.grade : 0; }
