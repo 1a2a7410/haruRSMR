@@ -165,8 +165,8 @@
       <option value="">정렬 없음</option>
       <option value="price_desc">가격 높은 순</option>
       <option value="price_asc">가격 낮은 순</option>
-      <option value="count_desc">캐릭터 많은 순</option>
-      <option value="count_asc">캐릭터 적은 순</option>
+      <option value="count_desc">5성 캐릭터 많은 순</option>
+      <option value="count_asc">5성 캐릭터 적은 순</option>
     </select>
     <label class="chk"><input type="checkbox" id="hide-sold"> 판매완료 숨기기</label>
     <button id="btn-search">검색</button>
@@ -381,10 +381,16 @@ function applyFilters(list){
 function sortResults(list){
   const v = document.getElementById('sort').value;
   const ext = list.map(a=>({ a, price:Number(a['가격']||0), cnt:getAccCount(a) }));
+  const names = getAccItems(a);
+    const fiveCount = names.filter(n => gradeOfName(n) === 5).length;
+    const price = Number(a['가격']||0);
+    return { a, price, cnt, fiveCount };
+  });
+  
   if(v==='price_desc') ext.sort((x,y)=>y.price-x.price);
   if(v==='price_asc')  ext.sort((x,y)=>x.price-y.price);
-  if(v==='count_desc') ext.sort((x,y)=>y.cnt-x.cnt);
-  if(v==='count_asc')  ext.sort((x,y)=>x.cnt-y.cnt);
+  if(v==='count_desc') ext.sort((x,y)=>y.fiveCount-x.fiveCount); // 5성 많은 순
+  if(v==='count_asc')  ext.sort((x,y)=>x.fiveCount-y.fiveCount); // 5성 적은 순
   return ext.map(x=>x.a);
 }
 function gradeOfName(name){ const meta = itemsMap.get(name); return meta ? meta.grade : 0; }
