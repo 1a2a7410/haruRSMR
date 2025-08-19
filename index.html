@@ -79,22 +79,41 @@
     content-visibility:auto;
     contain-intrinsic-size: 260px 180px;
   }
-  /* 판매완료된 계정 카드 회색 처리 */
+/* 판매완료 카드: 전체적으로 어둡고 흐리게 + 클릭 느낌 제거 */
 .acc.sold{
-  background:#d1d5db !important;   /* 카드 배경 회색 */
-  border-color:#92918f !important; /* 테두리 연한 회색 */
-  opacity:.50;                      /* 약간 흐리게 */
+  position: relative;
+  background:#d1d5db !important;   /* 더 진한 회색 배경 */
+  border-color:#9ca3af !important;  /* 테두리도 진하게 */
+  cursor: default;                  /* 클릭 느낌 약화 */
 }
 
-/* 회색 배경에서 텍스트도 톤다운(선택 사항) */
-.acc.sold .price,
-.acc.sold .mut,
-.acc.sold .uid{
-  color:#6b7280 !important;
+/* 어둡게 덮는 반투명 레이어 */
+.acc.sold::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:rgba(17,24,39,.35);    /* 거의 검정에 가까운 반투명 */
+  border-radius:12px;
+  pointer-events:none;
 }
 
-/* 썸네일도 살짝 무채화(선택 사항) */
-/* .acc.sold .thumbs img{ filter:grayscale(1) opacity(.95); } */
+/* 실제 내용은 오버레이 위로 */
+.acc.sold > *{
+  position: relative;
+  z-index:1;
+}
+
+/* 썸네일은 더 흐리게/무채색으로 */
+.acc.sold .thumbs img{
+  filter: grayscale(100%) brightness(0.85) contrast(0.9);
+}
+
+/* 상태 뱃지는 반전해서 더 눈에 띄게 */
+.acc.sold .pill{
+  background:#1f2937;
+  color:#fff;
+  border-color:#111827;
+}
   .acc h3 { margin:0 0 8px; font-size:16px; display:flex; justify-content:space-between; gap:8px; align-items:center; }
   .acc h3 .uid { font-weight:800; cursor:pointer; }
   .acc h3 .uid:hover { color:#0ea5e9; text-decoration:underline; }
